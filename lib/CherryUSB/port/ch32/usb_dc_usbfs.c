@@ -37,7 +37,7 @@ __attribute__((aligned(4))) uint8_t EP5_DatabufHD[64 + 64]; //ep5_out(64)+ep5_in
 __attribute__((aligned(4))) uint8_t EP6_DatabufHD[64 + 64]; //ep6_out(64)+ep6_in(64)
 __attribute__((aligned(4))) uint8_t EP7_DatabufHD[64 + 64]; //ep7_out(64)+ep7_in(64)
 
-void USBD_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void USBD_IRQHandler(void) __attribute__((naked));
 
 volatile uint8_t mps_over_flag = 0;
 
@@ -440,7 +440,12 @@ int usbd_ep_read(const uint8_t ep, uint8_t *data, uint32_t max_data_len, uint32_
     return 0;
 }
 
-void USBD_IRQHandler(void)
+
+void USBD_IRQHandler(void){
+    __asm volatile ("call USBD_IRQHandler_impl; mret");
+}
+
+void USBD_IRQHandler_impl(void)
 {
     uint8_t intflag = 0;
 

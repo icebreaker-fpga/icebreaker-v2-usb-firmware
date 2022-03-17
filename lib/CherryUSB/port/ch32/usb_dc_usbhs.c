@@ -34,7 +34,7 @@ __attribute__ ((aligned(4))) uint8_t EP1_DatabufHD[512+512];  //ep1_out(64)+ep1_
 __attribute__ ((aligned(4))) uint8_t EP2_DatabufHD[512+512];  //ep2_out(64)+ep2_in(64)
 // clang-format on
 
-void USBHS_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void USBHS_IRQHandler(void) __attribute__((naked));
 
 volatile uint8_t mps_over_flag = 0;
 volatile uint8_t USBHS_Dev_Endp0_Tog = 0x01; /* USB2.0�����豸�˵�0ͬ����־ */
@@ -385,7 +385,11 @@ int usbd_ep_read(const uint8_t ep, uint8_t *data, uint32_t max_data_len, uint32_
     return 0;
 }
 
-void USBD_IRQHandler(void)
+void USBD_IRQHandler(void){
+    __asm volatile ("call USBD_IRQHandler_impl; mret");
+}
+
+void USBD_IRQHandler_impl(void)
 {
     uint32_t end_num, rx_token;
     uint8_t intflag = 0;
