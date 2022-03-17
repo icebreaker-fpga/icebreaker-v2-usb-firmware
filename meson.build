@@ -41,7 +41,6 @@ objcopy = find_program('objcopy')
 objdump = find_program('objdump')
 
 subdir('vendor')
-subdir('lib')
 subdir('src')
 
 name = 'icebreaker-ch32v307-usb'
