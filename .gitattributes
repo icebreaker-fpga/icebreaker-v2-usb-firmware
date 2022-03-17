@@ -1,0 +1,37 @@
+#  Copyright 2022 Ahmed Charles <me@ahmedcharles.com>
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+# text files (full name)
+.clang-format                           text eol=lf
+.gitattributes                          text eol=lf
+.gitignore                              text eol=lf
+LICENSE                                 text eol=lf
+Makefile                                text eol=lf
+meson.build                             text eol=lf
+riscv-xpack                             text eol=lf
+
+# text files (extension)
+*.bat                                   text eol=crlf
+*.c                                     text eol=lf
+*.h                                     text eol=lf
+*.ld                                    text eol=lf
+*.md                                    text eol=lf
+*.py                                    text eol=lf
+*.rst                                   text eol=lf
+*.rules                                 text eol=lf
+*.S                                     text eol=lf
+*.txt                                   text eol=lf
+
+# binary files (extension)
+*.png                                   binary
