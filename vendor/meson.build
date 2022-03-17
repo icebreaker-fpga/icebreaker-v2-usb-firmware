@@ -1,0 +1,5 @@
+subdir('Core')
+subdir('Debug')
+subdir('Ld')
+subdir('Peripheral')
+subdir('Startup')

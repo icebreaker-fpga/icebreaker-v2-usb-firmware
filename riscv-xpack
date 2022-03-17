@@ -1,0 +1,16 @@
+[constants]
+arch = 'riscv-none-embed'
+
+[binaries]
+c = arch + '-gcc'
+cpp = arch + '-g++'
+ar = arch + '-gcc-ar'
+strip = arch + '-strip'
+objcopy = arch + '-objcopy'
+objdump = arch + '-objdump'
+
+[host_machine]
+system = 'baremetal'
+cpu_family = 'riscv32'
+cpu = 'riscv32'
+endian = 'little'
