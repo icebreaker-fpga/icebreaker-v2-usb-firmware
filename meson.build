@@ -41,5 +41,5 @@ objcopy = find_program('objcopy')
 objdump = find_program('objdump')
 
 subdir('vendor')
-
+subdir('lib')
 subdir('src')
