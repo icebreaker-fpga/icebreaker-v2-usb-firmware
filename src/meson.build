@@ -8,8 +8,8 @@ src = files([
 ])
 exe = executable(
   name + '.elf',
-  [src, core_src, debug_src, peripheral_src, startup_src, cherryusb_src],
-  include_directories : [inc, core_inc, debug_inc, peripheral_inc, cherryusb_inc],
+  [src, ch32v307_src, cherryusb_src],
+  include_directories : [inc, ch32v307_inc, cherryusb_inc],
 )
 hex = custom_target(
   name + '.hex',

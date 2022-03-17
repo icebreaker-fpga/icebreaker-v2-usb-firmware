@@ -1,0 +1,4 @@
+# For more information on clang-format:
+# http://clang.llvm.org/docs/ClangFormat.html
+
+DisableFormat: true
