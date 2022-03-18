@@ -344,17 +344,17 @@ int usbd_ep_write(const uint8_t ep, const uint8_t *data, uint32_t data_len, uint
         case 1:
             memcpy(&EP1_DatabufHD[512], data, data_len);
             USBHS_DEVICE->UEP1_TX_LEN = data_len;
-            USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK | USBHS_EP_T_LEN_MASK | USBHS_EP_T_TOG_MASK)) | USBHS_EP_T_RES_ACK;
+            USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             break;
         case 2:
             memcpy(&EP2_DatabufHD[512], data, data_len);
             USBHS_DEVICE->UEP2_TX_LEN = data_len;
-            USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK | USBHS_EP_T_LEN_MASK | USBHS_EP_T_TOG_MASK)) | USBHS_EP_T_RES_ACK;
+            USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             break;
         case 3:
             memcpy(&EP2_DatabufHD[512], data, data_len);
             USBHS_DEVICE->UEP3_TX_LEN = data_len;
-            USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK | USBHS_EP_T_LEN_MASK | USBHS_EP_T_TOG_MASK)) | USBHS_EP_T_RES_ACK;
+            USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             break;
         default:
             break;
@@ -441,18 +441,24 @@ void USBD_IRQHandler_impl(void)
             if (rx_token == PID_IN) {
                 //USBHS_Endp1_Up_Flag = 0x00;
                 /* Ĭ�ϻ�NAK */
-                USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK | USBHS_EP_T_TOG_MASK)) | USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
+                USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK;
+                usbd_event_notify_handler(USBD_EVENT_EP_IN_NOTIFY, (void*)end_num);
             } else if (rx_token == PID_OUT) {
+                usbd_event_notify_handler(USBD_EVENT_EP_OUT_NOTIFY, (void*)end_num);
             }
         } else if (end_num == 2) {
             if (rx_token == PID_IN) {
-                USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK | USBHS_EP_T_TOG_MASK)) | USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
+                USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK ;
+                usbd_event_notify_handler(USBD_EVENT_EP_IN_NOTIFY, (void*)end_num);
             } else if (rx_token == PID_OUT) {
+                usbd_event_notify_handler(USBD_EVENT_EP_OUT_NOTIFY, (void*)end_num);
             }
         } else if (end_num == 3) {
             if (rx_token == PID_IN) {
-                USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK | USBHS_EP_T_TOG_MASK)) | USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
+                USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK;
+                usbd_event_notify_handler(USBD_EVENT_EP_IN_NOTIFY, (void*)end_num);
             } else if (rx_token == PID_OUT) {
+                usbd_event_notify_handler(USBD_EVENT_EP_OUT_NOTIFY, (void*)end_num);
             }
         }
         USBHS_DEVICE->INT_FG = USBHS_TRANSFER_FLAG;
