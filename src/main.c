@@ -21,6 +21,8 @@
 
 #include <usbd_cdc.h>
 
+#include "cdc_acm_template.h"
+
 void usb_dc_low_level_init(void) {
   RCC_USBCLK48MConfig(RCC_USBCLK48MCLKSource_USBPHY);
   RCC_USBHSPLLCLKConfig(RCC_HSBHSPLLCLKSource_HSE);
@@ -49,13 +51,11 @@ int main() {
 
   Delay_Ms(10);
 
-  extern void cdc_acm_init(void);
   cdc_acm_init();
 
   while (!usb_device_is_configured()) {
   }
   while (1) {
-    extern void cdc_acm_data_send_with_dtr_test();
     cdc_acm_data_send_with_dtr_test();
     Delay_Ms(500);
   }

@@ -19,6 +19,8 @@
 
 #include <usbd_cdc.h>
 
+#include "cdc_acm_template.h"
+
 /*!< endpoint address */
 #define CDC_IN_EP  0x81
 #define CDC_OUT_EP 0x02
@@ -145,7 +147,7 @@ usbd_endpoint_t cdc_out_ep = { .ep_addr = CDC_OUT_EP, .ep_cb = usbd_cdc_acm_out 
 usbd_endpoint_t cdc_in_ep = { .ep_addr = CDC_IN_EP, .ep_cb = usbd_cdc_acm_in };
 
 /* function ------------------------------------------------------------------*/
-void cdc_acm_init(void) {
+void cdc_acm_init() {
   usbd_desc_register(cdc_descriptor);
   /*!< add interface */
   usbd_cdc_add_acm_interface(&cdc_class, &cdc_cmd_intf);
@@ -154,7 +156,6 @@ void cdc_acm_init(void) {
   usbd_interface_add_endpoint(&cdc_data_intf, &cdc_out_ep);
   usbd_interface_add_endpoint(&cdc_data_intf, &cdc_in_ep);
 
-  extern int usb_dc_init(void);
   usb_dc_init();
 }
 
