@@ -22,6 +22,6 @@ cherryusb_inc = include_directories([
 cherryusb_src = files([
   'class/cdc/usbd_cdc.c',
   'core/usbd_core.c',
-#  'port/ch32/usb_dc_usbhs.c',
-  'port/ch32/usb_dc_usbfs.c',
+  'port/ch32/usb_dc_usbhs.c',
+#  'port/ch32/usb_dc_usbfs.c',
 ])

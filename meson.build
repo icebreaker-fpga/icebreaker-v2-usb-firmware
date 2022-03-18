@@ -35,6 +35,7 @@ add_global_arguments([
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
+  '-DCONFIG_USB_HS',
 ], language: ['c', 'cpp'])
 add_global_link_arguments([
   '-march=rv32imac',
