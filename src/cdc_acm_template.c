@@ -127,16 +127,24 @@ usbd_interface_t cdc_cmd_intf;
 /*!< interface two */
 usbd_interface_t cdc_data_intf;
 
-/* function ------------------------------------------------------------------*/
+// data terminal ready
+volatile uint8_t dtr_enable = 0;
+
+// data from host
 void usbd_cdc_acm_out(uint8_t ep) {
   uint8_t data[64];
   uint32_t read_byte;
 
   usbd_ep_read(ep, data, 64, &read_byte);
-  printf("read len: %" PRIu32 "\r\n", read_byte);
+  printf("read len: %" PRIu32 ": %.*s\r\n", read_byte, (int)read_byte, data);
+  printf("read len: %d\r\n", (int)data[0]);
+  if (dtr_enable) {
+    usbd_ep_write(CDC_IN_EP, data, read_byte, NULL);
+  }
   usbd_ep_read(ep, NULL, 0, NULL);
 }
 
+// data to host
 void usbd_cdc_acm_in(uint8_t ep) {
   printf("in\r\n");
 }
@@ -159,9 +167,8 @@ void cdc_acm_init() {
   usb_dc_init();
 }
 
-volatile uint8_t dtr_enable = 0;
-
 void usbd_cdc_acm_set_dtr(bool dtr) {
+  printf("dtr: %d\r\n", (int)dtr);
   if (dtr) {
     dtr_enable = 1;
   } else {
@@ -171,7 +178,7 @@ void usbd_cdc_acm_set_dtr(bool dtr) {
 
 void cdc_acm_data_send_with_dtr_test(void) {
   if (dtr_enable) {
-    uint8_t data_buffer[10] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x31, 0x32, 0x33, 0x34, 0x35 };
-    usbd_ep_write(CDC_IN_EP, data_buffer, 10, NULL);
+    //uint8_t data_buffer[10] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x31, 0x32, 0x33, 0x34, 0x35 };
+    //usbd_ep_write(CDC_IN_EP, data_buffer, 10, NULL);
   }
 }
