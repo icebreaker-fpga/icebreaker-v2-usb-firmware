@@ -35,8 +35,10 @@ add_global_arguments([
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
-  '-DCONFIG_USB_HS',
 ], language: ['c', 'cpp'])
+if get_option('usb_port') == 'hs'
+  add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
+endif
 add_global_link_arguments([
   '-march=rv32imac',
   '-mabi=ilp32',

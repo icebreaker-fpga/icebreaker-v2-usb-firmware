@@ -15,6 +15,20 @@ meson setup build/ --cross-file riscv-xpack # or riscv-sifive
 meson compile -C build/
 ```
 
+### High vs Full Speed ports
+
+When creating a new build:
+
+```text
+meson setup build/ --cross-file riscv-xpack -Dusb_port=hs # or fs
+```
+
+Change an existing build:
+
+```text
+meson --reconfigure build/ -Dusb_port=hs # or fs
+```
+
 ## License
 
 Unless otherwise stated files are licensed as Apache-2.0:
