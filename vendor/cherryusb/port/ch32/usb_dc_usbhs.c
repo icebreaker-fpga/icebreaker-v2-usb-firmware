@@ -54,116 +54,116 @@ int usb_dc_init(void)
 
     usb_dc_low_level_init();
 
-    USBHS_DEVICE->HOST_CTRL = 0x00;
-    USBHS_DEVICE->HOST_CTRL = USBHS_PHY_SUSPENDM;
+    USBHSD->HOST_CTRL = 0x00;
+    USBHSD->HOST_CTRL = USBHS_PHY_SUSPENDM;
 
-    USBHS_DEVICE->CONTROL = 0;
+    USBHSD->CONTROL = 0;
 #if 1
-    USBHS_DEVICE->CONTROL = USBHS_DMA_EN | USBHS_INT_BUSY_EN | USBHS_HIGH_SPEED;
+    USBHSD->CONTROL = USBHS_DMA_EN | USBHS_INT_BUSY_EN | USBHS_HIGH_SPEED;
 #else
-    USBHS_DEVICE->CONTROL = USBHS_DMA_EN | USBHS_INT_BUSY_EN | USBHS_FULL_SPEED;
+    USBHSD->CONTROL = USBHS_DMA_EN | USBHS_INT_BUSY_EN | USBHS_FULL_SPEED;
 #endif
 
-    USBHS_DEVICE->INT_EN = 0;
-    USBHS_DEVICE->INT_EN = USBHS_SETUP_ACT_EN | USBHS_TRANSFER_EN | USBHS_DETECT_EN | USBHS_SUSPEND_EN;
+    USBHSD->INT_EN = 0;
+    USBHSD->INT_EN = USBHS_SETUP_ACT_EN | USBHS_TRANSFER_EN | USBHS_DETECT_EN | USBHS_SUSPEND_EN;
 
     /* ALL endpoint enable */
-    USBHS_DEVICE->ENDP_CONFIG = 0xffffffff;
+    USBHSD->ENDP_CONFIG = 0xffffffff;
 
-    USBHS_DEVICE->ENDP_CONFIG = USBHS_EP0_T_EN | USBHS_EP0_R_EN | USBHS_EP1_T_EN | USBHS_EP2_T_EN | USBHS_EP3_T_EN | USBHS_EP1_R_EN | USBHS_EP2_R_EN | USBHS_EP3_R_EN;
-    USBHS_DEVICE->ENDP_TYPE = 0x00;
-    USBHS_DEVICE->BUF_MODE = 0x00;
+    USBHSD->ENDP_CONFIG = USBHS_EP0_T_EN | USBHS_EP0_R_EN | USBHS_EP1_T_EN | USBHS_EP2_T_EN | USBHS_EP3_T_EN | USBHS_EP1_R_EN | USBHS_EP2_R_EN | USBHS_EP3_R_EN;
+    USBHSD->ENDP_TYPE = 0x00;
+    USBHSD->BUF_MODE = 0x00;
 
-    USBHS_DEVICE->UEP0_MAX_LEN = 64;
-    USBHS_DEVICE->UEP1_MAX_LEN = 512;
-    USBHS_DEVICE->UEP2_MAX_LEN = 512;
-    USBHS_DEVICE->UEP3_MAX_LEN = 512;
-    USBHS_DEVICE->UEP4_MAX_LEN = 512;
-    USBHS_DEVICE->UEP5_MAX_LEN = 512;
-    USBHS_DEVICE->UEP6_MAX_LEN = 512;
-    USBHS_DEVICE->UEP7_MAX_LEN = 512;
-    USBHS_DEVICE->UEP8_MAX_LEN = 512;
-    USBHS_DEVICE->UEP9_MAX_LEN = 512;
-    USBHS_DEVICE->UEP10_MAX_LEN = 512;
-    USBHS_DEVICE->UEP11_MAX_LEN = 512;
-    USBHS_DEVICE->UEP12_MAX_LEN = 512;
-    USBHS_DEVICE->UEP13_MAX_LEN = 512;
-    USBHS_DEVICE->UEP14_MAX_LEN = 512;
-    USBHS_DEVICE->UEP15_MAX_LEN = 512;
+    USBHSD->UEP0_MAX_LEN = 64;
+    USBHSD->UEP1_MAX_LEN = 512;
+    USBHSD->UEP2_MAX_LEN = 512;
+    USBHSD->UEP3_MAX_LEN = 512;
+    USBHSD->UEP4_MAX_LEN = 512;
+    USBHSD->UEP5_MAX_LEN = 512;
+    USBHSD->UEP6_MAX_LEN = 512;
+    USBHSD->UEP7_MAX_LEN = 512;
+    USBHSD->UEP8_MAX_LEN = 512;
+    USBHSD->UEP9_MAX_LEN = 512;
+    USBHSD->UEP10_MAX_LEN = 512;
+    USBHSD->UEP11_MAX_LEN = 512;
+    USBHSD->UEP12_MAX_LEN = 512;
+    USBHSD->UEP13_MAX_LEN = 512;
+    USBHSD->UEP14_MAX_LEN = 512;
+    USBHSD->UEP15_MAX_LEN = 512;
 
-    USBHS_DEVICE->UEP0_DMA = (uint32_t)EP0_DatabufHD;
-    USBHS_DEVICE->UEP1_TX_DMA = (uint32_t)&EP1_DatabufHD[512];
-    USBHS_DEVICE->UEP1_RX_DMA = (uint32_t)&EP1_DatabufHD[0];
-    USBHS_DEVICE->UEP2_TX_DMA = (uint32_t)&EP2_DatabufHD[512];
-    USBHS_DEVICE->UEP2_RX_DMA = (uint32_t)&EP2_DatabufHD[0];
-    USBHS_DEVICE->UEP3_TX_DMA = (uint32_t)&EP3_DatabufHD[512];
-    USBHS_DEVICE->UEP3_RX_DMA = (uint32_t)&EP3_DatabufHD[0];
+    USBHSD->UEP0_DMA = (uint32_t)EP0_DatabufHD;
+    USBHSD->UEP1_TX_DMA = (uint32_t)&EP1_DatabufHD[512];
+    USBHSD->UEP1_RX_DMA = (uint32_t)&EP1_DatabufHD[0];
+    USBHSD->UEP2_TX_DMA = (uint32_t)&EP2_DatabufHD[512];
+    USBHSD->UEP2_RX_DMA = (uint32_t)&EP2_DatabufHD[0];
+    USBHSD->UEP3_TX_DMA = (uint32_t)&EP3_DatabufHD[512];
+    USBHSD->UEP3_RX_DMA = (uint32_t)&EP3_DatabufHD[0];
 
-    USBHS_DEVICE->UEP0_TX_LEN = 0;
-    USBHS_DEVICE->UEP0_TX_CTRL = USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP0_RX_CTRL = USBHS_EP_R_RES_ACK;
+    USBHSD->UEP0_TX_LEN = 0;
+    USBHSD->UEP0_TX_CTRL = USBHS_EP_T_RES_NAK;
+    USBHSD->UEP0_RX_CTRL = USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP1_TX_LEN = 0;
-    USBHS_DEVICE->UEP1_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP1_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP1_TX_LEN = 0;
+    USBHSD->UEP1_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP1_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP2_TX_LEN = 0;
-    USBHS_DEVICE->UEP2_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP2_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP2_TX_LEN = 0;
+    USBHSD->UEP2_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP2_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP3_TX_LEN = 0;
-    USBHS_DEVICE->UEP3_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP3_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP3_TX_LEN = 0;
+    USBHSD->UEP3_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP3_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP4_TX_LEN = 0;
-    USBHS_DEVICE->UEP4_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP4_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP4_TX_LEN = 0;
+    USBHSD->UEP4_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP4_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP5_TX_LEN = 0;
-    USBHS_DEVICE->UEP5_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP5_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP5_TX_LEN = 0;
+    USBHSD->UEP5_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP5_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP6_TX_LEN = 0;
-    USBHS_DEVICE->UEP6_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP6_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP6_TX_LEN = 0;
+    USBHSD->UEP6_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP6_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP7_TX_LEN = 0;
-    USBHS_DEVICE->UEP7_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP7_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP7_TX_LEN = 0;
+    USBHSD->UEP7_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP7_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP8_TX_LEN = 0;
-    USBHS_DEVICE->UEP8_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP8_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP8_TX_LEN = 0;
+    USBHSD->UEP8_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP8_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP9_TX_LEN = 0;
-    USBHS_DEVICE->UEP9_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP9_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP9_TX_LEN = 0;
+    USBHSD->UEP9_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP9_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP10_TX_LEN = 0;
-    USBHS_DEVICE->UEP10_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP10_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP10_TX_LEN = 0;
+    USBHSD->UEP10_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP10_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP11_TX_LEN = 0;
-    USBHS_DEVICE->UEP11_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP11_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP11_TX_LEN = 0;
+    USBHSD->UEP11_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP11_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP12_TX_LEN = 0;
-    USBHS_DEVICE->UEP12_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP12_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP12_TX_LEN = 0;
+    USBHSD->UEP12_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP12_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP13_TX_LEN = 0;
-    USBHS_DEVICE->UEP13_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP13_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP13_TX_LEN = 0;
+    USBHSD->UEP13_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP13_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP14_TX_LEN = 0;
-    USBHS_DEVICE->UEP14_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP14_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP14_TX_LEN = 0;
+    USBHSD->UEP14_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP14_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->UEP15_TX_LEN = 0;
-    USBHS_DEVICE->UEP15_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
-    USBHS_DEVICE->UEP15_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+    USBHSD->UEP15_TX_LEN = 0;
+    USBHSD->UEP15_TX_CTRL = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
+    USBHSD->UEP15_RX_CTRL = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
 
-    USBHS_DEVICE->CONTROL |= USBHS_DEV_PU_EN;
+    USBHSD->CONTROL |= USBHS_DEV_PU_EN;
 
     return 0;
 }
@@ -176,7 +176,7 @@ int usb_dc_deinit(void)
 int usbd_set_address(const uint8_t addr)
 {
     if (addr == 0) {
-        USBHS_DEVICE->DEV_AD = addr & 0xff;
+        USBHSD->DEV_AD = addr & 0xff;
     }
     usb_dc_cfg.dev_addr = addr;
     return 0;
@@ -206,16 +206,16 @@ int usbd_ep_set_stall(const uint8_t ep)
     if (USB_EP_DIR_IS_OUT(ep)) {
         switch (ep_idx) {
             case 0:
-                USBHS_DEVICE->UEP0_RX_CTRL = USBHS_EP_R_RES_STALL;
+                USBHSD->UEP0_RX_CTRL = USBHS_EP_R_RES_STALL;
                 break;
             case 1:
-                USBHS_DEVICE->UEP1_RX_CTRL = (USBHS_DEVICE->UEP1_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_STALL;
+                USBHSD->UEP1_RX_CTRL = (USBHSD->UEP1_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_STALL;
                 break;
             case 2:
-                USBHS_DEVICE->UEP2_RX_CTRL = (USBHS_DEVICE->UEP2_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_STALL;
+                USBHSD->UEP2_RX_CTRL = (USBHSD->UEP2_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_STALL;
                 break;
             case 3:
-                USBHS_DEVICE->UEP3_RX_CTRL = (USBHS_DEVICE->UEP3_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_STALL;
+                USBHSD->UEP3_RX_CTRL = (USBHSD->UEP3_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_STALL;
                 break;
             default:
                 break;
@@ -224,17 +224,17 @@ int usbd_ep_set_stall(const uint8_t ep)
     } else {
         switch (ep_idx) {
             case 0:
-                USBHS_DEVICE->UEP0_TX_LEN = 0;
-                USBHS_DEVICE->UEP0_TX_CTRL = USBHS_EP_T_RES_STALL;
+                USBHSD->UEP0_TX_LEN = 0;
+                USBHSD->UEP0_TX_CTRL = USBHS_EP_T_RES_STALL;
                 break;
             case 1:
-                USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~USBHS_EP_T_RES_MASK) | USBHS_EP_T_RES_STALL;
+                USBHSD->UEP1_TX_CTRL = (USBHSD->UEP1_TX_CTRL & ~USBHS_EP_T_RES_MASK) | USBHS_EP_T_RES_STALL;
                 break;
             case 2:
-                USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~USBHS_EP_T_RES_MASK) | USBHS_EP_T_RES_STALL;
+                USBHSD->UEP2_TX_CTRL = (USBHSD->UEP2_TX_CTRL & ~USBHS_EP_T_RES_MASK) | USBHS_EP_T_RES_STALL;
                 break;
             case 3:
-                USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~USBHS_EP_T_RES_MASK) | USBHS_EP_T_RES_STALL;
+                USBHSD->UEP3_TX_CTRL = (USBHSD->UEP3_TX_CTRL & ~USBHS_EP_T_RES_MASK) | USBHS_EP_T_RES_STALL;
                 break;
             default:
                 break;
@@ -255,15 +255,15 @@ int usbd_ep_clear_stall(const uint8_t ep)
                 break;
             case 1:
                 /* SET Endp1 Rx to USBHS_EP_R_RES_NAK;USBHS_EP_R_TOG_0 */
-                USBHS_DEVICE->UEP1_RX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
+                USBHSD->UEP1_RX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
                 break;
             case 2:
                 /* SET Endp2 Rx to USBHS_EP_R_RES_ACK;USBHS_EP_R_TOG_0 */
-                USBHS_DEVICE->UEP2_TX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
+                USBHSD->UEP2_TX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
                 break;
             case 3:
                 /* SET Endp3 Rx to USBHS_EP_R_RES_ACK;USBHS_EP_R_TOG_0 */
-                USBHS_DEVICE->UEP3_TX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
+                USBHSD->UEP3_TX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
                 break;
             default:
                 break;
@@ -276,18 +276,18 @@ int usbd_ep_clear_stall(const uint8_t ep)
                 break;
             case 1:
                 /* SET Endp1 Tx to USBHS_EP_T_RES_NAK;USBHS_EP_T_TOG_0;len = 0 */
-                USBHS_DEVICE->UEP1_TX_LEN = 0;
-                USBHS_DEVICE->UEP1_TX_CTRL = USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
+                USBHSD->UEP1_TX_LEN = 0;
+                USBHSD->UEP1_TX_CTRL = USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
                 break;
             case 2:
                 /* SET Endp2 Tx to USBHS_EP_T_RES_NAK;USBHS_EP_T_TOG_0;len = 0 */
-                USBHS_DEVICE->UEP2_TX_LEN = 0;
-                USBHS_DEVICE->UEP2_TX_CTRL = USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
+                USBHSD->UEP2_TX_LEN = 0;
+                USBHSD->UEP2_TX_CTRL = USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
                 break;
             case 3:
                 /* SET Endp2 Tx to USBHS_EP_T_RES_NAK;USBHS_EP_T_TOG_0;len = 0 */
-                USBHS_DEVICE->UEP3_TX_LEN = 0;
-                USBHS_DEVICE->UEP3_TX_CTRL = USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
+                USBHSD->UEP3_TX_LEN = 0;
+                USBHSD->UEP3_TX_CTRL = USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
                 break;
             default:
                 break;
@@ -311,17 +311,17 @@ int usbd_ep_write(const uint8_t ep, const uint8_t *data, uint32_t data_len, uint
     if (!data_len) {
         switch (ep_idx) {
             case 0:
-                USBHS_DEVICE->UEP0_TX_LEN = 0;
-                USBHS_DEVICE->UEP0_TX_CTRL = USBHS_EP_T_RES_ACK | USBHS_EP_T_TOG_1;
+                USBHSD->UEP0_TX_LEN = 0;
+                USBHSD->UEP0_TX_CTRL = USBHS_EP_T_RES_ACK | USBHS_EP_T_TOG_1;
                 break;
             case 1:
-                USBHS_DEVICE->UEP1_TX_LEN = 0;
+                USBHSD->UEP1_TX_LEN = 0;
                 break;
             case 2:
-                USBHS_DEVICE->UEP2_TX_LEN = 0;
+                USBHSD->UEP2_TX_LEN = 0;
                 break;
             case 3:
-                USBHS_DEVICE->UEP3_TX_LEN = 0;
+                USBHSD->UEP3_TX_LEN = 0;
                 break;
             default:
                 break;
@@ -338,23 +338,23 @@ int usbd_ep_write(const uint8_t ep, const uint8_t *data, uint32_t data_len, uint
         case 0:
             USBHS_Dev_Endp0_Tog ^= 1;
             memcpy(&EP0_DatabufHD[0], data, data_len);
-            USBHS_DEVICE->UEP0_TX_LEN = data_len;
-            USBHS_DEVICE->UEP0_TX_CTRL = USBHS_EP_T_RES_ACK | (USBHS_Dev_Endp0_Tog ? USBHS_EP_T_TOG_0 : USBHS_EP_T_TOG_1);
+            USBHSD->UEP0_TX_LEN = data_len;
+            USBHSD->UEP0_TX_CTRL = USBHS_EP_T_RES_ACK | (USBHS_Dev_Endp0_Tog ? USBHS_EP_T_TOG_0 : USBHS_EP_T_TOG_1);
             break;
         case 1:
             memcpy(&EP1_DatabufHD[512], data, data_len);
-            USBHS_DEVICE->UEP1_TX_LEN = data_len;
-            USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
+            USBHSD->UEP1_TX_LEN = data_len;
+            USBHSD->UEP1_TX_CTRL = (USBHSD->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             break;
         case 2:
             memcpy(&EP2_DatabufHD[512], data, data_len);
-            USBHS_DEVICE->UEP2_TX_LEN = data_len;
-            USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
+            USBHSD->UEP2_TX_LEN = data_len;
+            USBHSD->UEP2_TX_CTRL = (USBHSD->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             break;
         case 3:
             memcpy(&EP2_DatabufHD[512], data, data_len);
-            USBHS_DEVICE->UEP3_TX_LEN = data_len;
-            USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
+            USBHSD->UEP3_TX_LEN = data_len;
+            USBHSD->UEP3_TX_CTRL = (USBHSD->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             break;
         default:
             break;
@@ -380,7 +380,7 @@ int usbd_ep_read(const uint8_t ep, uint8_t *data, uint32_t max_data_len, uint32_
         return 0;
     }
 
-    read_count = USBHS_DEVICE->RX_LEN;
+    read_count = USBHSD->RX_LEN;
     read_count = MIN(read_count, max_data_len);
 
     switch (ep_idx) {
@@ -421,57 +421,57 @@ void USBD_IRQHandler_impl(void)
     uint32_t end_num, rx_token;
     uint8_t intflag = 0;
 
-    intflag = USBHS_DEVICE->INT_FG;
+    intflag = USBHSD->INT_FG;
 
     if (intflag & USBHS_TRANSFER_FLAG) {
-        end_num = (USBHS_DEVICE->INT_ST) & MASK_UIS_ENDP;
-        rx_token = (((USBHS_DEVICE->INT_ST) & MASK_UIS_TOKEN) >> 4) & 0x03;
+        end_num = (USBHSD->INT_ST) & MASK_UIS_ENDP;
+        rx_token = (((USBHSD->INT_ST) & MASK_UIS_TOKEN) >> 4) & 0x03;
         if (end_num == 0) {
             if (rx_token == PID_IN) {
                 usbd_event_notify_handler(USBD_EVENT_EP0_IN_NOTIFY, NULL);
                 if (usb_dc_cfg.dev_addr > 0) {
-                    USBHS_DEVICE->DEV_AD = usb_dc_cfg.dev_addr & 0xff;
+                    USBHSD->DEV_AD = usb_dc_cfg.dev_addr & 0xff;
                     usb_dc_cfg.dev_addr = 0;
                 }
             } else if (rx_token == PID_OUT) {
                 usbd_event_notify_handler(USBD_EVENT_EP0_OUT_NOTIFY, NULL);
-                USBHS_DEVICE->UEP0_RX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_1;
+                USBHSD->UEP0_RX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_1;
             }
         } else if (end_num == 1) {
             if (rx_token == PID_IN) {
                 //USBHS_Endp1_Up_Flag = 0x00;
-                /* Ĭ�ϻ�NAK */
-                USBHS_DEVICE->UEP1_TX_CTRL = (USBHS_DEVICE->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK;
+                /* Mukun compares to NAK */
+                USBHSD->UEP1_TX_CTRL = (USBHSD->UEP1_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK;
                 usbd_event_notify_handler(USBD_EVENT_EP_IN_NOTIFY, (void*)end_num);
             } else if (rx_token == PID_OUT) {
                 usbd_event_notify_handler(USBD_EVENT_EP_OUT_NOTIFY, (void*)end_num);
             }
         } else if (end_num == 2) {
             if (rx_token == PID_IN) {
-                USBHS_DEVICE->UEP2_TX_CTRL = (USBHS_DEVICE->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK ;
+                USBHSD->UEP2_TX_CTRL = (USBHSD->UEP2_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK ;
                 usbd_event_notify_handler(USBD_EVENT_EP_IN_NOTIFY, (void*)end_num);
             } else if (rx_token == PID_OUT) {
                 usbd_event_notify_handler(USBD_EVENT_EP_OUT_NOTIFY, (void*)end_num);
             }
         } else if (end_num == 3) {
             if (rx_token == PID_IN) {
-                USBHS_DEVICE->UEP3_TX_CTRL = (USBHS_DEVICE->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK;
+                USBHSD->UEP3_TX_CTRL = (USBHSD->UEP3_TX_CTRL & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_NAK;
                 usbd_event_notify_handler(USBD_EVENT_EP_IN_NOTIFY, (void*)end_num);
             } else if (rx_token == PID_OUT) {
                 usbd_event_notify_handler(USBD_EVENT_EP_OUT_NOTIFY, (void*)end_num);
             }
         }
-        USBHS_DEVICE->INT_FG = USBHS_TRANSFER_FLAG;
+        USBHSD->INT_FG = USBHS_TRANSFER_FLAG;
     } else if (intflag & USBHS_SETUP_FLAG) {
         USBHS_Dev_Endp0_Tog = 1;
         usbd_event_notify_handler(USBD_EVENT_SETUP_NOTIFY, NULL);
-        USBHS_DEVICE->INT_FG = USBHS_SETUP_FLAG;
+        USBHSD->INT_FG = USBHS_SETUP_FLAG;
     } else if (intflag & USBHS_DETECT_FLAG) {
         usbd_event_notify_handler(USBD_EVENT_RESET, NULL);
-        USBHS_DEVICE->INT_FG = USBHS_DETECT_FLAG;
+        USBHSD->INT_FG = USBHS_DETECT_FLAG;
     } else if (intflag & USBHS_SUSPEND_FLAG) {
         USB_LOG_INFO("USB Suspend Event\r\n");
         /* TODO Handle suspend? */
-        USBHS_DEVICE->INT_FG = USBHS_SUSPEND_FLAG;
+        USBHSD->INT_FG = USBHS_SUSPEND_FLAG;
     }
 }
