@@ -10,6 +10,8 @@
 #include "ch32v30x_eth.h"
 #include "ch32v30x_rcc.h"
 
+#include <inttypes.h>
+
 ETH_DMADESCTypeDef *DMATxDescToSet;
 ETH_DMADESCTypeDef *DMARxDescToGet;
 ETH_DMADESCTypeDef *DMAPTPTxDescToSet;
@@ -1285,7 +1287,7 @@ FlagStatus ETH_GetSoftwareResetStatus(void)
     {
         bitstatus = RESET;
     }
-    printf("ETH->DMABMR is:%08x\n", ETH->DMABMR);
+    printf("ETH->DMABMR is:%08" PRIx32 "\n", ETH->DMABMR);
 
     return bitstatus;
 }

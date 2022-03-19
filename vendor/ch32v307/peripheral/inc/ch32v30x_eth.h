@@ -947,11 +947,11 @@ Wake-UpFrame Filter Re7 : Filter3 CRC16 - Filter2 CRC16 */
 #define ETH_MACA3HR_MACA3H   ((unsigned int)0x0000FFFF)  /* MAC address3 high */
 #define ETH_MACA3LR_MACA3L   ((unsigned int)0xFFFFFFFF)  /* MAC address3 low */
 
-/******************************************************************************/
-/*
-/*                          ETH MMC Register
-/*
-/******************************************************************************/
+/*******************************************************************************
+ *
+ *                          ETH MMC Register
+ *
+ ******************************************************************************/
 #define ETH_MMCCR_MCFHP      ((unsigned int)0x00000020)  /* MMC counter Full-Half preset */
 #define ETH_MMCCR_MCP        ((unsigned int)0x00000010)  /* MMC counter preset */
 #define ETH_MMCCR_MCF        ((unsigned int)0x00000008)  /* MMC Counter Freeze */
@@ -988,11 +988,11 @@ Wake-UpFrame Filter Re7 : Filter3 CRC16 - Filter2 CRC16 */
 #define ETH_MMCRGUFCR_RGUFC  ((unsigned int)0xFFFFFFFF)  /* Number of good unicast frames received. */
 
 
-/******************************************************************************/
-/*
-/*                          ETH Precise Clock Protocol Register
-/*
-/******************************************************************************/
+/*******************************************************************************
+ *
+ *                          ETH Precise Clock Protocol Register
+ *
+ ******************************************************************************/
 #define ETH_PTPTSCR_TSCNT       ((unsigned int)0x00030000)  /* Time stamp clock node type */
 #define ETH_PTPTSSR_TSSMRME     ((unsigned int)0x00008000)  /* Time stamp snapshot for message relevant to master enable */
 #define ETH_PTPTSSR_TSSEME      ((unsigned int)0x00004000)  /* Time stamp snapshot for event message enable */
@@ -1031,11 +1031,11 @@ Wake-UpFrame Filter Re7 : Filter3 CRC16 - Filter2 CRC16 */
 #define ETH_PTPTSSR_TSTTR    ((unsigned int)0x00000020)  /* Time stamp target time reached */
 #define ETH_PTPTSSR_TSSO     ((unsigned int)0x00000010)  /* Time stamp seconds overflow */
 
-/******************************************************************************/
-/*
-/*                       ETH DMA Register
-/*
-/******************************************************************************/
+/*******************************************************************************
+ *
+ *                       ETH DMA Register
+ *
+ ******************************************************************************/
 #define ETH_DMABMR_AAB       ((unsigned int)0x02000000)  /* Address-Aligned beats */
 #define ETH_DMABMR_FPM        ((unsigned int)0x01000000)  /* 4xPBL mode */
 #define ETH_DMABMR_USP       ((unsigned int)0x00800000)  /* Use separate PBL */
