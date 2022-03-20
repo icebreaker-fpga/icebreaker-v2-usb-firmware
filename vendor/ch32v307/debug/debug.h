@@ -20,7 +20,9 @@
 #define DEBUG_UART3    3
 
 /* DEBUG UATR Definition */
+#ifndef DEBUG
 #define DEBUG   DEBUG_UART1
+#endif
 //#define DEBUG   DEBUG_UART2
 //#define DEBUG   DEBUG_UART3
 

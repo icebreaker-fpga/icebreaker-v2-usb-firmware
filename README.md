@@ -15,19 +15,25 @@ meson setup build/ --cross-file riscv-xpack # or riscv-sifive
 meson compile -C build/
 ```
 
-### High vs Full Speed ports
+### Build Options
 
-When creating a new build:
+Options are specified via meson's options, when creating a new build:
 
 ```text
-meson setup build/ --cross-file riscv-xpack -Dusb_port=hs # or fs
+meson setup build/ --cross-file riscv-xpack -Doption_name=option_value
 ```
 
 Change an existing build:
 
 ```text
-meson --reconfigure build/ -Dusb_port=hs # or fs
+meson --reconfigure build/ -Doption_name=option_value
 ```
+
+| Option Name   | Option Value                    | Option Description        |
+| ------------- | ------------------------------- | ------------------------- |
+| board         | ch32v307v-r1, icebreaker-v1.99a | which board/pins are used |
+| usb_port      | hs, fs                          | which usb port is used    |
+| usb_debug     | error, warning, info, log       | which debug level is used |
 
 ## License
 

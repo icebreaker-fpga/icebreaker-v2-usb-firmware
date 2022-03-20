@@ -12,6 +12,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+option('board',
+  type : 'combo',
+  choices : ['ch32v307v-r1', 'icebreaker-v1.99a'],
+  value : 'ch32v307v-r1',
+  description : 'which board/pin layout to use',
+)
+option('usb_debug',
+  type : 'combo',
+  choices : ['error', 'warning', 'info', 'log'],
+  value : 'info',
+  description : 'usb debug output',
+)
 option('usb_port', type : 'combo', choices : ['hs', 'fs'], value : 'hs',
   description : 'hs - high speed port, fs - full speed port',
 )

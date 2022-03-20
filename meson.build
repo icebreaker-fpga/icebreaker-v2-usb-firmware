@@ -39,6 +39,20 @@ add_global_arguments([
 if get_option('usb_port') == 'hs'
   add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
 endif
+if get_option('usb_debug') == 'error'
+  add_global_arguments('-DUSB_DBG_LEVEL=0', language: ['c', 'cpp'])
+elif get_option('usb_debug') == 'warning'
+  add_global_arguments('-DUSB_DBG_LEVEL=1', language: ['c', 'cpp'])
+elif get_option('usb_debug') == 'info'
+  add_global_arguments('-DUSB_DBG_LEVEL=2', language: ['c', 'cpp'])
+elif get_option('usb_debug') == 'log'
+  add_global_arguments('-DUSB_DBG_LEVEL=3', language: ['c', 'cpp'])
+endif
+if get_option('board') == 'ch32v307v-r1'
+  add_global_arguments('-DDEBUG=1', language: ['c', 'cpp'])
+elif get_option('board') == 'icebreaker-v1.99a'
+  add_global_arguments('-DDEBUG=3', language: ['c', 'cpp'])
+endif
 add_global_link_arguments([
   '-march=rv32imac',
   '-mabi=ilp32',
