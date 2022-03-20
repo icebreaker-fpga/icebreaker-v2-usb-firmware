@@ -19,7 +19,7 @@
 
 #include <usbd_cdc.h>
 
-#include "cdc_acm_template.h"
+#include "cdc_acm_to_uart.h"
 
 /*!< endpoint address */
 #define CDC_IN_EP  0x81
@@ -168,7 +168,6 @@ void cdc_acm_init() {
 }
 
 void usbd_cdc_acm_set_dtr(bool dtr) {
-  printf("dtr: %d\r\n", (int)dtr);
   if (dtr) {
     dtr_enable = 1;
   } else {

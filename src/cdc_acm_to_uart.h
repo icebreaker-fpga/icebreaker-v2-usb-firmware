@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CDC_ACM_TEMPLATE_H
-#define CDC_ACM_TEMPLATE_H
+#ifndef CDC_ACM_TO_UART_H
+#define CDC_ACM_TO_UART_H
 
 void cdc_acm_init();
 void cdc_acm_data_send_with_dtr_test();
 
-#endif /* CDC_ACM_TEMPLATE_H */
+#endif /* CDC_ACM_TO_UART_H */

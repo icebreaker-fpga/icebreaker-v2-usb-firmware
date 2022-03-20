@@ -21,7 +21,7 @@
 
 #include <usbd_cdc.h>
 
-#include "cdc_acm_template.h"
+#include "cdc_acm_to_uart.h"
 
 void usb_dc_low_level_init(void) {
   RCC_USBCLK48MConfig(RCC_USBCLK48MCLKSource_USBPHY);
