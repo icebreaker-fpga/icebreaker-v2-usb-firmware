@@ -16,6 +16,5 @@
 #define CDC_ACM_TO_UART_H
 
 void cdc_acm_init();
-void cdc_acm_data_send_with_dtr_test();
 
 #endif /* CDC_ACM_TO_UART_H */

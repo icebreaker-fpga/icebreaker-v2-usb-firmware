@@ -56,7 +56,5 @@ int main() {
   while (!usb_device_is_configured()) {
   }
   while (1) {
-    cdc_acm_data_send_with_dtr_test();
-    Delay_Ms(500);
   }
 }
