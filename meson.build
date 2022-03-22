@@ -27,21 +27,25 @@ assert(
 )
 
 add_global_arguments([
-  '-march=rv32imac',
-  '-mabi=ilp32',
+  '-flto',
+  '-march=rv32imafc',
+  '-mabi=ilp32f',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
+  '-DCFG_TUSB_MCU=OPT_MCU_CH32VF307',
+	'-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
 ], language: ['c', 'cpp'])
 if get_option('usb_port') == 'hs'
   add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
 endif
 add_global_link_arguments([
-  '-march=rv32imac',
-  '-mabi=ilp32',
+  '-flto',
+  '-march=rv32imafc',
+  '-mabi=ilp32f',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -64,8 +68,8 @@ subdir('src')
 name = 'icebreaker-ch32v307-usb'
 exe = executable(
   name + '.elf',
-  [src, ch32v307_src, cherryusb_src],
-  include_directories : [inc, ch32v307_inc, cherryusb_inc],
+  [src, ch32v307_src, tusb_src],
+  include_directories : [inc, ch32v307_inc, tusb_inc],
 )
 hex = custom_target(
   name + '.hex',
