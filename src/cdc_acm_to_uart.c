@@ -216,7 +216,7 @@ void usbd_cdc_acm_set_dtr(bool dtr) {
   }
 }
 
-void UART6_IRQHandler_impl() {
+__attribute__ ((used)) void UART6_IRQHandler_impl() {
   if (USART_GetITStatus(UART6, USART_IT_RXNE) != RESET && dtr_enable) {
     uint8_t data = USART_ReceiveData(UART6);
     usbd_ep_write(CDC_IN_EP, &data, 1, NULL);

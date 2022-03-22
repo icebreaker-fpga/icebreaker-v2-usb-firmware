@@ -445,7 +445,7 @@ void USBD_IRQHandler(void){
     __asm volatile ("call USBD_IRQHandler_impl; mret");
 }
 
-void USBD_IRQHandler_impl(void)
+__attribute__ ((used)) void USBD_IRQHandler_impl(void)
 {
     uint8_t intflag = 0;
 

@@ -53,3 +53,4 @@ linker_script = files('ld' / 'link.ld')
 add_global_link_arguments([
   '-T@0@'.format(meson.project_source_root() / '@0@'.format(linker_script[0])),
 ], language: ['c', 'cpp'])
+ch32v307_link_depends = linker_script

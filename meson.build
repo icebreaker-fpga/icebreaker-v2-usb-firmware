@@ -27,8 +27,9 @@ assert(
 )
 
 add_global_arguments([
-  '-march=rv32imac',
-  '-mabi=ilp32',
+  '-flto',
+  '-march=rv32imafc',
+  '-mabi=ilp32f',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -54,8 +55,9 @@ elif get_option('board') == 'icebreaker-v1.99a'
   add_global_arguments('-DDEBUG=3', language: ['c', 'cpp'])
 endif
 add_global_link_arguments([
-  '-march=rv32imac',
-  '-mabi=ilp32',
+  '-flto',
+  '-march=rv32imafc',
+  '-mabi=ilp32f',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -80,6 +82,8 @@ exe = executable(
   name + '.elf',
   [src, ch32v307_src, cherryusb_src],
   include_directories : [inc, ch32v307_inc, cherryusb_inc],
+  implicit_include_directories : false,
+  link_depends : [ch32v307_link_depends],
 )
 hex = custom_target(
   name + '.hex',
