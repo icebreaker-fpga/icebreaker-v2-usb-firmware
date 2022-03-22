@@ -13,6 +13,20 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-subdir('ch32v307')
-subdir('cherryusb')
-subdir('tinyusb')
+tusb_inc = include_directories([
+    'tinyusb_src/src',
+    'tinyusb_src/src/device',
+    'tinyusb_src/src/common',
+    'tinyusb_src/src/class/cdc',
+])
+tusb_src = files([
+    'tinyusb_src/src/tusb.c',
+    'tinyusb_src/src/device/usbd.c',
+    'tinyusb_src/src/device/usbd_control.c',
+    'tinyusb_src/src/common/tusb_fifo.c',
+    'tinyusb_src/src/class/cdc/cdc_device.c',
+    'tinyusb_src/src/class/dfu/dfu_device.c',
+    'tinyusb_src/src/class/dfu/dfu_rt_device.c',
+    'tinyusb_src/src/class/hid/hid_device.c',
+    'tinyusb_src/src/class/msc/msc_device.c',
+])
