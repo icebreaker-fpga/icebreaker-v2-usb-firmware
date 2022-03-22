@@ -38,6 +38,7 @@ add_global_arguments([
   '-fdata-sections',
   '-DCFG_TUSB_MCU=OPT_MCU_CH32VF307',
 	'-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
+  '-DTUP_DCD_ENDPOINT_MAX=16',
 ], language: ['c', 'cpp'])
 if get_option('usb_port') == 'hs'
   add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
