@@ -14,5 +14,4 @@
 #  limitations under the License.
 
 subdir('ch32v307')
-subdir('cherryusb')
 subdir('tinyusb')

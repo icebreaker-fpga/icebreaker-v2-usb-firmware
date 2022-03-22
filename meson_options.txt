@@ -20,8 +20,8 @@ option('board',
 )
 option('usb_debug',
   type : 'combo',
-  choices : ['error', 'warning', 'info', 'log'],
-  value : 'info',
+  choices : ['none', 'error', 'warning', 'info'],
+  value : 'none',
   description : 'usb debug output',
 )
 option('usb_port', type : 'combo', choices : ['hs', 'fs'], value : 'hs',

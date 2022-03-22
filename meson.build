@@ -36,18 +36,20 @@ c_args = [
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
+  '-DCFG_TUSB_MCU=OPT_MCU_CH32VF307',
+  '-DTUP_DCD_ENDPOINT_MAX=16',
 ]
 if get_option('usb_port') == 'hs'
-  c_args += '-DCONFIG_USB_HS'
+  c_args += '-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED'
 endif
-if get_option('usb_debug') == 'error'
-  c_args += '-DUSB_DBG_LEVEL=0'
+if get_option('usb_debug') == 'none'
+  c_args += '-DCFG_TUSB_DEBUG=0'
+elif get_option('usb_debug') == 'error'
+  c_args += '-DCFG_TUSB_DEBUG=1'
 elif get_option('usb_debug') == 'warning'
-  c_args += '-DUSB_DBG_LEVEL=1'
+  c_args += '-DCFG_TUSB_DEBUG=2'
 elif get_option('usb_debug') == 'info'
-  c_args += '-DUSB_DBG_LEVEL=2'
-elif get_option('usb_debug') == 'log'
-  c_args += '-DUSB_DBG_LEVEL=3'
+  c_args += '-DCFG_TUSB_DEBUG=3'
 endif
 if get_option('board') == 'ch32v307v-r1'
   c_args += '-DDEBUG=1'
@@ -80,10 +82,10 @@ subdir('src')
 name = 'icebreaker-ch32v307-usb'
 exe = executable(
   name + '.elf',
-  [src, ch32v307_src, cherryusb_src],
+  [src, ch32v307_src, tusb_src],
   c_args : c_args,
   cpp_args : c_args,
-  include_directories : [inc, ch32v307_inc, cherryusb_inc],
+  include_directories : [inc, ch32v307_inc, tusb_inc],
   implicit_include_directories : false,
   link_args : link_args,
   link_depends : [ch32v307_link_depends],
