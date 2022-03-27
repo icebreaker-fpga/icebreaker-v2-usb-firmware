@@ -368,8 +368,12 @@ handle_reset:
     csrw 0xbc0, t0
 
     /* Enable nested and hardware stack */
-	li t0, 0x1f
-	csrw 0x804, t0
+    /* HWSTKOVEN -  1 = interrupt enabled after hardware stack overflow */
+    /* PMTCFG    - 11 = 8 nested levels, 3 preemption bits */
+    /* INESTEN   -  1 = interrupt nesting enabled */
+    /* HWSTKEN   -  1 = hardware stack enabled */
+    li t0, 0x1f /* HWSTKOVEN[4], PMTCFG[3:2], INESTEN[1], HWSTKEN[0] */
+    csrw 0x804, t0 /* INTSYSCR (CSR) */
 
     /* Enable floating point and interrupt */
    	li t0, 0x6088           
