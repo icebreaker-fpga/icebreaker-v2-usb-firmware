@@ -24,8 +24,7 @@ jobs:
       run: |
         python3 -m pip install setuptools meson ninja
 
-    - name: Litex build
-      working-directory: ./gateware
+    - name: riscv build
       run: |
         meson setup build/ --cross-file riscv-xpack
         meson compile -C build/
