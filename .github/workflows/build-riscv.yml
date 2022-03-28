@@ -1,0 +1,31 @@
+name: build-riscv
+
+on:
+  push:
+
+
+jobs:
+  # Main build, creates firmware update image
+  build-soc:
+    runs-on: ubuntu-latest
+    steps:
+    # Checkout Repository
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Checkout Submodule
+      run: |
+        git submodule update --init
+
+    - name: RISC-V GNU setup
+      uses: gregdavill/setup-riscv-gnu-toolchain@v1.0
+    
+    - name: configure python
+      run: |
+        python3 -m pip install setuptools meson ninja
+
+    - name: Litex build
+      working-directory: ./gateware
+      run: |
+        meson setup build/ --cross-file riscv-xpack
+        meson compile -C build/
