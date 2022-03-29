@@ -26,7 +26,7 @@ assert(
   'Microcontroller projects can only be built in a cross build environment.',
 )
 
-add_global_arguments([
+c_args = [
   '-flto',
   '-march=rv32imafc',
   '-mabi=ilp32f',
@@ -36,25 +36,25 @@ add_global_arguments([
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
-], language: ['c', 'cpp'])
+]
 if get_option('usb_port') == 'hs'
-  add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
+  c_args += '-DCONFIG_USB_HS'
 endif
 if get_option('usb_debug') == 'error'
-  add_global_arguments('-DUSB_DBG_LEVEL=0', language: ['c', 'cpp'])
+  c_args += '-DUSB_DBG_LEVEL=0'
 elif get_option('usb_debug') == 'warning'
-  add_global_arguments('-DUSB_DBG_LEVEL=1', language: ['c', 'cpp'])
+  c_args += '-DUSB_DBG_LEVEL=1'
 elif get_option('usb_debug') == 'info'
-  add_global_arguments('-DUSB_DBG_LEVEL=2', language: ['c', 'cpp'])
+  c_args += '-DUSB_DBG_LEVEL=2'
 elif get_option('usb_debug') == 'log'
-  add_global_arguments('-DUSB_DBG_LEVEL=3', language: ['c', 'cpp'])
+  c_args += '-DUSB_DBG_LEVEL=3'
 endif
 if get_option('board') == 'ch32v307v-r1'
-  add_global_arguments('-DDEBUG=1', language: ['c', 'cpp'])
+  c_args += '-DDEBUG=1'
 elif get_option('board') == 'icebreaker-v1.99a'
-  add_global_arguments('-DDEBUG=3', language: ['c', 'cpp'])
+  c_args += '-DDEBUG=3'
 endif
-add_global_link_arguments([
+link_args = [
   '-flto',
   '-march=rv32imafc',
   '-mabi=ilp32f',
@@ -69,7 +69,7 @@ add_global_link_arguments([
   '--gc-sections',
   '--specs=nano.specs',
   '--specs=nosys.specs',
-], language: ['c', 'cpp'])
+]
 
 objcopy = find_program('objcopy')
 objdump = find_program('objdump')
@@ -81,8 +81,11 @@ name = 'icebreaker-ch32v307-usb'
 exe = executable(
   name + '.elf',
   [src, ch32v307_src, cherryusb_src],
+  c_args : c_args,
+  cpp_args : c_args,
   include_directories : [inc, ch32v307_inc, cherryusb_inc],
   implicit_include_directories : false,
+  link_args : link_args,
   link_depends : [ch32v307_link_depends],
 )
 hex = custom_target(
