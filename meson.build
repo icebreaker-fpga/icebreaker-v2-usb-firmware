@@ -80,6 +80,14 @@ hex = custom_target(
   depends : exe,
   build_by_default : true,
 )
+bin = custom_target(
+  name + '.bin',
+  input : exe,
+  output : name + '.bin',
+  command : [objcopy, '-O', 'binary', '@INPUT@', '@OUTPUT@'],
+  depends : exe,
+  build_by_default : true,
+)
 lst = custom_target(
   name + '.lst',
   input : exe,
@@ -89,3 +97,4 @@ lst = custom_target(
   depends : exe,
   build_by_default : true,
 )
+run_target('upload', command: [ find_program('python'), '-m', 'ch55xtool', '-f', bin, '-r'], depends: exe)

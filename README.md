@@ -12,7 +12,7 @@ Firmware to implement USB communications on the CH32V307 microcontroller.
 
 ```text
 meson setup build/ --cross-file riscv-xpack # or riscv-sifive
-meson compile -C build/
+ninja -C build
 ```
 
 ### High vs Full Speed ports
@@ -27,6 +27,12 @@ Change an existing build:
 
 ```text
 meson --reconfigure build/ -Dusb_port=hs # or fs
+```
+
+## Uploading
+
+```text
+ninja -C build upload
 ```
 
 ## License
