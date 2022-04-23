@@ -23,9 +23,10 @@
 
 #include "tusb.h"
 
+#include "usb_ch32_usbhs_reg.h"
 
 void cdc_task(void);
-
+void blink_task(void);
 
 //--------------------------------------------------------------------+
 // Forward USB interrupt events to TinyUSB IRQ Handler
@@ -58,6 +59,7 @@ void board_init(void) {
   __disable_irq();
 
 
+
 #if CFG_TUSB_OS == OPT_OS_NONE
   SysTick_Config(SystemCoreClock / 1000);
 #endif
@@ -78,6 +80,15 @@ void board_init(void) {
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+  GPIO_Init(
+    GPIOC, 
+    &(GPIO_InitTypeDef) {
+      .GPIO_Mode = GPIO_Mode_Out_PP,
+      .GPIO_Speed = GPIO_Speed_10MHz,
+      .GPIO_Pin = GPIO_Pin_2,
+    }
+  );
 
   /* Enable interrupts globaly */
   __enable_irq();
@@ -111,8 +122,9 @@ int main() {
   while (1)
   {
     tud_task(); // tinyusb device task
-    
     cdc_task();
+
+    blink_task();
   }
 
 
@@ -195,4 +207,20 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 void tud_cdc_rx_cb(uint8_t itf)
 {
   (void) itf;
+}
+
+
+void blink_task(){
+  static unsigned int _time;
+  static bool _toggle;
+
+  if((board_millis() - _time) > 250){
+    _time = board_millis();
+
+    if(_toggle ^= 1){
+      GPIO_ResetBits(GPIOC, 4);
+    }else{
+      GPIO_SetBits(GPIOC, 4);
+    }
+  }
 }
