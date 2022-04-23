@@ -27,6 +27,7 @@
 
 void cdc_task(void);
 void blink_task(void);
+void reset_task(void);
 
 //--------------------------------------------------------------------+
 // Forward USB interrupt events to TinyUSB IRQ Handler
@@ -76,6 +77,7 @@ void board_init(void) {
   GPIO_InitTypeDef GPIO_InitStructure = {0};
 
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOE, ENABLE);
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -87,6 +89,15 @@ void board_init(void) {
       .GPIO_Mode = GPIO_Mode_Out_PP,
       .GPIO_Speed = GPIO_Speed_10MHz,
       .GPIO_Pin = GPIO_Pin_2,
+    }
+  );
+
+  GPIO_Init(
+    GPIOE, 
+    &(GPIO_InitTypeDef) {
+      .GPIO_Mode = GPIO_Mode_IPU,
+      .GPIO_Speed = GPIO_Speed_10MHz,
+      .GPIO_Pin = GPIO_Pin_3,
     }
   );
 
@@ -125,6 +136,7 @@ int main() {
     cdc_task();
 
     blink_task();
+    reset_task();
   }
 
 
@@ -222,5 +234,11 @@ void blink_task(){
     }else{
       GPIO_SetBits(GPIOC, 4);
     }
+  }
+}
+
+void reset_task(){
+  if(GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_3)){
+    NVIC_SystemReset();
   }
 }
