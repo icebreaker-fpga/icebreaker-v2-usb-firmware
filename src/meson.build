@@ -22,6 +22,7 @@ src = files([
   'ch32v30x_it.c',
   'main.c',
   'system_ch32v30x.c',
+  'flash.c',
   'tusb/usb_descriptors.c',
   'tusb/portable/wch/ch32v307/usb_dc_usbhs.c'
 ])

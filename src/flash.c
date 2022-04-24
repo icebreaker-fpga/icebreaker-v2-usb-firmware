@@ -10,279 +10,448 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <generated/csr.h>
+
+#include "ch32v30x.h"
 
 #include "flash.h"
 
 
-static uint32_t transfer_byte(uint8_t b)
+/* Winbond SPIFalsh ID */
+#define W25Q80                   0XEF13
+#define W25Q16                   0XEF14
+#define W25Q32                   0XEF15
+#define W25Q64                   0XEF16
+#define W25Q128                  0XEF17
+
+/* Winbond SPIFalsh Instruction List */
+#define W25X_WriteEnable         0x06
+#define W25X_WriteDisable        0x04
+#define W25X_ReadStatusReg       0x05
+#define W25X_WriteStatusReg      0x01
+#define W25X_ReadData            0x03
+#define W25X_FastReadData        0x0B
+#define W25X_FastReadDual        0x3B
+#define W25X_PageProgram         0x02
+#define W25X_BlockErase          0xD8
+#define W25X_SectorErase         0x20
+#define W25X_ChipErase           0xC7
+#define W25X_PowerDown           0xB9
+#define W25X_ReleasePowerDown    0xAB
+#define W25X_DeviceID            0xAB
+#define W25X_ManufactDeviceID    0x90
+#define W25X_JedecDeviceID       0x9F
+
+/* Global define */
+
+/* Global Variable */
+u8       SPI_FLASH_BUF[4096];
+const u8 TEXT_Buf[] = {"CH32F103 SPI FLASH W25Qxx"};
+#define SIZE    sizeof(TEXT_Buf)
+
+/*********************************************************************
+ * @fn      SPI1_ReadWriteByte
+ *
+ * @brief   SPI1 read or write one byte.
+ *
+ * @param   TxData - write one byte data.
+ *
+ * @return  Read one byte data.
+ */
+u8 SPI1_ReadWriteByte(u8 TxData)
 {
-	// wait for tx ready
-	while(!spiflash_core_master_status_tx_ready_read())
-	;
+    u8 i = 0;
 
-	spiflash_core_master_rxtx_write((uint32_t)b);
+    while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET)
+    {
+        i++;
+        if(i > 200)
+            return 0;
+    }
 
-	//wait for rx ready
-	while(!spiflash_core_master_status_rx_ready_read())
-	;
+    SPI_I2S_SendData(SPI1, TxData);
+    i = 0;
 
-	return spiflash_core_master_rxtx_read();
-}
+    while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET)
+    {
+        i++;
+        if(i > 200)
+            return 0;
+    }
 
-static void transfer_cmd(uint8_t *bs, uint8_t *resp, int len)
-{
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
-
-	if(resp != 0){
-		if(bs != 0){
-			for(int i=0; i < len; i++)
-				resp[i] = transfer_byte(bs[i]);
-		}else{
-			for(int i=0; i < len; i++)
-				resp[i] = transfer_byte(0xFF);
-		}
-	}else{
-		for(int i=0; i < len; i++)
-			transfer_byte(bs[i]);
-	}
-
-	spiflash_core_master_cs_write(0);
-}
-
-uint32_t spiflash_read_status_register(void)
-{
-	uint8_t buf[2];
-    transfer_cmd((uint8_t[]){0x05, 0}, buf, 2);
-	return buf[1];
-}
-
-uint32_t spiflash_read_status2_register(void)
-{
-	uint8_t buf[2];
-    transfer_cmd((uint8_t[]){0x35, 0}, buf, 2);
-	return buf[1];
-}
-
-void spiflash_write_enable(void)
-{
-    transfer_cmd((uint8_t[]){0x06}, 0, 1);
-}
-
-void spiflash_page_program(uint32_t addr, uint8_t *data, int len)
-{
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
-
-	transfer_byte(0x32);
-	transfer_byte(addr >> 16);
-	transfer_byte(addr >> 8);
-	transfer_byte(addr >> 0);
-
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(4);
-	spiflash_core_master_phyconfig_mask_write(0x0F);
-
-	for(int i = 0; i < len; i++){
-	
-		while(!spiflash_core_master_status_tx_ready_read()){}
-		spiflash_core_master_rxtx_write((uint32_t)data[i]);		
-
-		while(!spiflash_core_master_status_rx_ready_read()){}
-		spiflash_core_master_rxtx_read();
-	}
-
-	spiflash_core_master_cs_write(0);
-}
-
-void spiflash_sector_erase(uint32_t addr)
-{
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
-
-	transfer_byte(0xd8);
-	transfer_byte(addr >> 16);
-	transfer_byte(addr >> 8);
-	transfer_byte(addr >> 0);
-
-	spiflash_core_master_cs_write(0);
-}
-
-#define min(x, y) (((x) < (y)) ? (x) : (y))
-
-int spiflash_write_stream(uint32_t addr, uint8_t *stream, int len)
-{
-	int res = 0;
-        if( ((uint32_t)addr & ((64*1024) - 1)) == 0)
-	{
-		int w_len = min(len, SPIFLASH_MODULE_PAGE_SIZE);
-		int offset = 0;
-		while(w_len)
-		{
-			if(((uint32_t)addr+offset) & ((64*1024) - 1) == 0)
-			{
-				spiflash_write_enable();
-				spiflash_sector_erase(addr+offset);
-
-				while (spiflash_read_status_register() & 1){}
-			}
-
-			spiflash_write_enable();
-			page_program(addr+offset, stream+offset, w_len);
-
-			while(spiflash_read_status_register() & 1){}
-
-			offset += w_len;
-			w_len = min(len-offset,SPIFLASH_MODULE_PAGE_SIZE);
-			res = offset;
-		}
-	}
-	return res;
+    return SPI_I2S_ReceiveData(SPI1);
 }
 
 
+/*********************************************************************
+ * @fn      SPI_Flash_ReadSR
+ *
+ * @brief   Read W25Qxx status register.
+ *        ����BIT7  6   5   4   3   2   1   0
+ *        ����SPR   RV  TB  BP2 BP1 BP0 WEL BUSY
+ *
+ * @return  byte - status register value.
+ */
+u8 SPI_Flash_ReadSR(void)
+{
+    u8 byte = 0;
 
-/* 25Q128JV FLASH, Read Unique ID Number (4Bh) 
-	The Read Unique ID Number instruction accesses a factory-set read-only 64-bit number that is unique to
-	each W25Q128JV device. The ID number can be used in conjunction with user software methods to help
-	prevent copying or cloning of a system. The Read Unique ID instruction is initiated by driving the /CS pin
-	low and shifting the instruction code “4Bh” followed by a four bytes of dummy clocks. After which, the 64-
-	bit ID is shifted out on the falling edge of CLK
-*/
-void spiflash_read_uuid(uint8_t* uuid) {
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_ReadStatusReg);
+    byte = SPI1_ReadWriteByte(0Xff);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
 
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
+    return byte;
+}
 
-	transfer_byte(0x4B);
-	transfer_byte(0xFF);
-	transfer_byte(0xFF);
-	transfer_byte(0xFF);
-	transfer_byte(0xFF);
+/*********************************************************************
+ * @fn      SPI_FLASH_Write_SR
+ *
+ * @brief   Write W25Qxx status register.
+ *
+ * @param   sr - status register value.
+ *
+ * @return  none
+ */
+void SPI_FLASH_Write_SR(u8 sr)
+{
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_WriteStatusReg);
+    SPI1_ReadWriteByte(sr);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+}
+
+/*********************************************************************
+ * @fn      SPI_Flash_Wait_Busy
+ *
+ * @brief   Wait flash free.
+ *
+ * @return  none
+ */
+void SPI_Flash_Wait_Busy(void)
+{
+    while((SPI_Flash_ReadSR() & 0x01) == 0x01)
+        ;
+}
+
+/*********************************************************************
+ * @fn      SPI_FLASH_Write_Enable
+ *
+ * @brief   Enable flash write.
+ *
+ * @return  none
+ */
+void SPI_FLASH_Write_Enable(void)
+{
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_WriteEnable);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+}
+
+/*********************************************************************
+ * @fn      SPI_FLASH_Write_Disable
+ *
+ * @brief   Disable flash write.
+ *
+ * @return  none
+ */
+void SPI_FLASH_Write_Disable(void)
+{
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_WriteDisable);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+}
+
+/*********************************************************************
+ * @fn      SPI_Flash_ReadID
+ *
+ * @brief   Read flash ID.
+ *
+ * @return  Temp - FLASH ID.
+ */
+u16 SPI_Flash_ReadID(void)
+{
+    u16 Temp = 0;
+
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_ManufactDeviceID);
+    SPI1_ReadWriteByte(0x00);
+    SPI1_ReadWriteByte(0x00);
+    SPI1_ReadWriteByte(0x00);
+    Temp |= SPI1_ReadWriteByte(0xFF) << 8;
+    Temp |= SPI1_ReadWriteByte(0xFF);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+
+    return Temp;
+}
+
+
+/*********************************************************************
+ * @fn      SPI_Flash_ReadUUID
+ *
+ * @brief   Read flash UUID.
+ * 
+ * @param   buf - buffer to store UUID
+ *
+ * @return  none
+ */
+void SPI_Flash_ReadUUID(u8* uuid)
+{
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(0x48);
+    SPI1_ReadWriteByte(0x00);
+    SPI1_ReadWriteByte(0x00);
+    SPI1_ReadWriteByte(0x00);
+    SPI1_ReadWriteByte(0x00);
 
 	for(int i=0; i < 8; i++)
-		uuid[i] = transfer_byte(0xFF);
+ 		uuid[i] = SPI1_ReadWriteByte(0xFF);
 
-	spiflash_core_master_cs_write(0);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
 }
 
-bool spiflash_protection_read(void){
-
-	uint8_t status = spiflash_read_status_register();
-	if((status & 0b11111100) != 0b00110000){
-		return false;
-	}
-
-	uint8_t status2 = spiflash_read_status2_register();
-	if((status2 & 0b01000011) != 0b00000010){
-		return false;
-	}
-
-	return true;
+/*********************************************************************
+ * @fn      SPI_Flash_Erase_Sector
+ *
+ * @brief   Erase one sector(4Kbyte).
+ *
+ * @param   Dst_Addr - 0 ���� 2047
+ *
+ * @return  none
+ */
+void SPI_Flash_Erase_Sector(u32 Dst_Addr)
+{
+    Dst_Addr *= 4096;
+    SPI_FLASH_Write_Enable();
+    SPI_Flash_Wait_Busy();
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_SectorErase);
+    SPI1_ReadWriteByte((u8)((Dst_Addr) >> 16));
+    SPI1_ReadWriteByte((u8)((Dst_Addr) >> 8));
+    SPI1_ReadWriteByte((u8)Dst_Addr);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+    SPI_Flash_Wait_Busy();
 }
 
-void spiflash_protection_write(bool lock){
+/*********************************************************************
+ * @fn      SPI_Flash_Read
+ *
+ * @brief   Read data from flash.
+ *
+ * @param   pBuffer -
+ *          ReadAddr -Initial address(24bit).
+ *          size - Data length.
+ *
+ * @return  none
+ */
+void SPI_Flash_Read(u8 *pBuffer, u32 ReadAddr, u16 size)
+{
+    u16 i;
 
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_ReadData);
+    SPI1_ReadWriteByte((u8)((ReadAddr) >> 16));
+    SPI1_ReadWriteByte((u8)((ReadAddr) >> 8));
+    SPI1_ReadWriteByte((u8)ReadAddr);
 
-	uint8_t status1 = 0;
-	if(((status1 = spiflash_read_status_register()) & 0b11111100) != (lock ? 0b00110000 : 0b00000000)){
-		spiflash_write_enable();
-		
-		spiflash_core_master_phyconfig_len_write(8);
-		spiflash_core_master_phyconfig_width_write(1);
-		spiflash_core_master_phyconfig_mask_write(1);
-		spiflash_core_master_cs_write(1);
+    for(i = 0; i < size; i++)
+    {
+        pBuffer[i] = SPI1_ReadWriteByte(0XFF);
+    }
 
-		transfer_byte(0x01);
-		if(lock){
-			transfer_byte(0b00110000);
-		}else{
-			transfer_byte(0b00000000);
-		}
-
-		spiflash_core_master_cs_write(0);
-	}
-
-
-	uint8_t status2 = 0;
-	if(((status2 = spiflash_read_status2_register()) & 0x02) == 0){
-	
-		spiflash_write_enable();
-		
-		spiflash_core_master_phyconfig_len_write(8);
-		spiflash_core_master_phyconfig_width_write(1);
-		spiflash_core_master_phyconfig_mask_write(1);
-		spiflash_core_master_cs_write(1);
-
-		transfer_byte(0x31);
-		transfer_byte(0b00000010 | status2);
-
-		spiflash_core_master_cs_write(0);
-	}
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
 }
 
-void spiflash_read_security_register(uint8_t security_page, uint8_t* buff){
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
+/*********************************************************************
+ * @fn      SPI_Flash_Write_Page
+ *
+ * @brief   Write data by one page.
+ *
+ * @param   pBuffer -
+ *          WriteAddr - Initial address(24bit).
+ *          size - Data length.
+ *
+ * @return  none
+ */
+void SPI_Flash_Write_Page(u8 *pBuffer, u32 WriteAddr, u16 size)
+{
+    u16 i;
 
-	transfer_byte(0x48);
-	transfer_byte(0x00);
-	transfer_byte(security_page << 4);
-	transfer_byte(0x00);
+    SPI_FLASH_Write_Enable();
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_PageProgram);
+    SPI1_ReadWriteByte((u8)((WriteAddr) >> 16));
+    SPI1_ReadWriteByte((u8)((WriteAddr) >> 8));
+    SPI1_ReadWriteByte((u8)WriteAddr);
 
-	transfer_byte(0x00);
+    for(i = 0; i < size; i++)
+    {
+        SPI1_ReadWriteByte(pBuffer[i]);
+    }
 
-	for(int byte_index = 0; byte_index < 256; byte_index++){
-		*buff++ = transfer_byte(0);
-	}
-
-	spiflash_core_master_cs_write(0);	
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+    SPI_Flash_Wait_Busy();
 }
 
-void spiflash_write_security_register(uint8_t security_page, uint8_t* buff){
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
+/*********************************************************************
+ * @fn      SPI_Flash_Write_NoCheck
+ *
+ * @brief   Write data to flash.(need Erase)
+ *          All data in address rang is 0xFF.
+ *
+ * @param   pBuffer -
+ *          WriteAddr - Initial address(24bit).
+ *          size - Data length.
+ *
+ * @return  none
+ */
+void SPI_Flash_Write_NoCheck(u8 *pBuffer, u32 WriteAddr, u16 size)
+{
+    u16 pageremain;
 
-	transfer_byte(0x42);
-	transfer_byte(0x00);
-	transfer_byte(security_page << 4);
-	transfer_byte(0x00);
+    pageremain = 256 - WriteAddr % 256;
 
-	for(int byte_index = 0; byte_index < 256; byte_index++){
-		transfer_byte(*buff++);
-	}
+    if(size <= pageremain)
+        pageremain = size;
 
-	spiflash_core_master_cs_write(0);	
+    while(1)
+    {
+        SPI_Flash_Write_Page(pBuffer, WriteAddr, pageremain);
 
-	while(spiflash_read_status_register() & 1){}
+        if(size == pageremain)
+        {
+            break;
+        }
+        else
+        {
+            pBuffer += pageremain;
+            WriteAddr += pageremain;
+            size -= pageremain;
+
+            if(size > 256)
+                pageremain = 256;
+            else
+                pageremain = size;
+        }
+    }
 }
 
-void spiflash_erase_security_register(uint8_t security_page){
-	spiflash_core_master_phyconfig_len_write(8);
-	spiflash_core_master_phyconfig_width_write(1);
-	spiflash_core_master_phyconfig_mask_write(1);
-	spiflash_core_master_cs_write(1);
+/*********************************************************************
+ * @fn      SPI_Flash_Write
+ *
+ * @brief   Write data to flash.(no need Erase)
+ *
+ * @param   pBuffer -
+ *          WriteAddr - Initial address(24bit).
+ *          size - Data length.
+ *
+ * @return  none
+ */
+void SPI_Flash_Write(u8 *pBuffer, u32 WriteAddr, u16 size)
+{
+    u32 secpos;
+    u16 secoff;
+    u16 secremain;
+    u16 i;
 
-	transfer_byte(0x44);
-	transfer_byte(0x00);
-	transfer_byte(security_page << 4);
-	transfer_byte(0x00);
+    secpos = WriteAddr / 4096;
+    secoff = WriteAddr % 4096;
+    secremain = 4096 - secoff;
 
-	spiflash_core_master_cs_write(0);	
+    if(size <= secremain)
+        secremain = size;
 
-	while(spiflash_read_status_register() & 1){}
+    while(1)
+    {
+        SPI_Flash_Read(SPI_FLASH_BUF, secpos * 4096, 4096);
+
+        for(i = 0; i < secremain; i++)
+        {
+            if(SPI_FLASH_BUF[secoff + i] != 0XFF)
+                break;
+        }
+
+        if(i < secremain)
+        {
+            SPI_Flash_Erase_Sector(secpos);
+
+            for(i = 0; i < secremain; i++)
+            {
+                SPI_FLASH_BUF[i + secoff] = pBuffer[i];
+            }
+
+            SPI_Flash_Write_NoCheck(SPI_FLASH_BUF, secpos * 4096, 4096);
+        }
+        else
+        {
+            SPI_Flash_Write_NoCheck(pBuffer, WriteAddr, secremain);
+        }
+
+        if(size == secremain)
+        {
+            break;
+        }
+        else
+        {
+            secpos++;
+            secoff = 0;
+
+            pBuffer += secremain;
+            WriteAddr += secremain;
+            size -= secremain;
+
+            if(size > 4096)
+            {
+                secremain = 4096;
+            }
+            else
+            {
+                secremain = size;
+            }
+        }
+    }
 }
 
+/*********************************************************************
+ * @fn      SPI_Flash_Erase_Chip
+ *
+ * @brief   Erase all FLASH pages.
+ *
+ * @return  none
+ */
+void SPI_Flash_Erase_Chip(void)
+{
+    SPI_FLASH_Write_Enable();
+    SPI_Flash_Wait_Busy();
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_ChipErase);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+    SPI_Flash_Wait_Busy();
+}
+
+/*********************************************************************
+ * @fn      SPI_Flash_PowerDown
+ *
+ * @brief   Enter power down mode.
+ *
+ * @return  none
+ */
+void SPI_Flash_PowerDown(void)
+{
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_PowerDown);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+}
+
+/*********************************************************************
+ * @fn      SPI_Flash_WAKEUP
+ *
+ * @brief   Power down wake up.
+ *
+ * @return  none
+ */
+void SPI_Flash_WAKEUP(void)
+{
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+    SPI1_ReadWriteByte(W25X_ReleasePowerDown);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+}
