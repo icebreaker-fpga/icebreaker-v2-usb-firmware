@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 Ha Thach (tinyusb.org)
@@ -24,46 +24,41 @@
  */
 
 #include "tusb.h"
-
-/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
- * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
- *
- * Auto ProductID layout's Bitmap:
- *   [MSB]         HID | MSC | CDC          [LSB]
- */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-                           _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )
-
-#define USB_VID   0xCafe
-#define USB_BCD   0x0200
+#include "class/dfu/dfu_device.h"
+#include "flash.h"
 
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
 tusb_desc_device_t const desc_device =
 {
-  .bLength            = sizeof(tusb_desc_device_t),
-  .bDescriptorType    = TUSB_DESC_DEVICE,
-  .bcdUSB             = USB_BCD,
+    .bLength            = sizeof(tusb_desc_device_t),
+    .bDescriptorType    = TUSB_DESC_DEVICE,
+    .bcdUSB             = 0x0200,
 
-  // Use Interface Association Descriptor (IAD) for CDC
-  // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1)
-  .bDeviceClass       = TUSB_CLASS_MISC,
-  .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
-  .bDeviceProtocol    = MISC_PROTOCOL_IAD,
+  #if CFG_TUD_CDC
+    // Use Interface Association Descriptor (IAD) for CDC
+    // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1)
+    .bDeviceClass       = TUSB_CLASS_MISC,
+    .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
+    .bDeviceProtocol    = MISC_PROTOCOL_IAD,
+  #else
+    .bDeviceClass       = 0x00,
+    .bDeviceSubClass    = 0x00,
+    .bDeviceProtocol    = 0x00,
+  #endif
 
-  .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
+    .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
 
-  .idVendor           = USB_VID,
-  .idProduct          = USB_PID,
-  .bcdDevice          = 0x0100,
+    .idVendor           = 0x1209,
+    .idProduct          = 0x5af1,
+    .bcdDevice          = 0x0100,
 
-  .iManufacturer      = 0x01,
-  .iProduct           = 0x02,
-  .iSerialNumber      = 0x03,
+    .iManufacturer      = 0x01,
+    .iProduct           = 0x02,
+    .iSerialNumber      = 0x03,
 
-  .bNumConfigurations = 0x01
+    .bNumConfigurations = 0x01
 };
 
 // Invoked when received GET DEVICE DESCRIPTOR
@@ -77,145 +72,43 @@ uint8_t const * tud_descriptor_device_cb(void)
 // Configuration Descriptor
 //--------------------------------------------------------------------+
 
+// Number of Alternate Interface (each for 1 flash partition)
+#define ALT_COUNT   3
+
 enum
 {
-  ITF_NUM_CDC = 0,
-  ITF_NUM_CDC_DATA,
-  ITF_NUM_MSC,
+  ITF_NUM_DFU_MODE,
   ITF_NUM_TOTAL
 };
 
-#if CFG_TUSB_MCU == OPT_MCU_LPC175X_6X || CFG_TUSB_MCU == OPT_MCU_LPC177X_8X || CFG_TUSB_MCU == OPT_MCU_LPC40XX
-  // LPC 17xx and 40xx endpoint type (bulk/interrupt/iso) are fixed by its number
-  // 0 control, 1 In, 2 Bulk, 3 Iso, 4 In, 5 Bulk etc ...
-  #define EPNUM_CDC_NOTIF   0x81
-  #define EPNUM_CDC_OUT     0x02
-  #define EPNUM_CDC_IN      0x82
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_DFU_DESC_LEN(ALT_COUNT))
 
-  #define EPNUM_MSC_OUT     0x05
-  #define EPNUM_MSC_IN      0x85
 
-#elif CFG_TUSB_MCU == OPT_MCU_SAMG  || CFG_TUSB_MCU ==  OPT_MCU_SAMX7X
-  // SAMG & SAME70 don't support a same endpoint number with different direction IN and OUT
-  //    e.g EP1 OUT & EP1 IN cannot exist together
-  #define EPNUM_CDC_NOTIF   0x81
-  #define EPNUM_CDC_OUT     0x02
-  #define EPNUM_CDC_IN      0x83
+#define FUNC_ATTRS (DFU_ATTR_WILL_DETACH | DFU_ATTR_CAN_DOWNLOAD | DFU_ATTR_MANIFESTATION_TOLERANT)
 
-  #define EPNUM_MSC_OUT     0x04
-  #define EPNUM_MSC_IN      0x85
-
-#elif CFG_TUSB_MCU == OPT_MCU_CXD56
-  // CXD56 doesn't support a same endpoint number with different direction IN and OUT
-  //    e.g EP1 OUT & EP1 IN cannot exist together
-  // CXD56 USB driver has fixed endpoint type (bulk/interrupt/iso) and direction (IN/OUT) by its number
-  // 0 control (IN/OUT), 1 Bulk (IN), 2 Bulk (OUT), 3 In (IN), 4 Bulk (IN), 5 Bulk (OUT), 6 In (IN)
-  #define EPNUM_CDC_NOTIF   0x83
-  #define EPNUM_CDC_OUT     0x02
-  #define EPNUM_CDC_IN      0x81
-
-  #define EPNUM_MSC_OUT     0x05
-  #define EPNUM_MSC_IN      0x84
-
-#elif CFG_TUSB_MCU == OPT_MCU_FT90X || CFG_TUSB_MCU == OPT_MCU_FT93X
-  // FT9XX doesn't support a same endpoint number with different direction IN and OUT
-  //    e.g EP1 OUT & EP1 IN cannot exist together
-  #define EPNUM_CDC_NOTIF   0x81
-  #define EPNUM_CDC_OUT     0x02
-  #define EPNUM_CDC_IN      0x83
-
-  #define EPNUM_MSC_OUT     0x04
-  #define EPNUM_MSC_IN      0x85
-
-#else
-  #define EPNUM_CDC_NOTIF   0x81
-  #define EPNUM_CDC_OUT     0x02
-  #define EPNUM_CDC_IN      0x82
-
-  #define EPNUM_MSC_OUT     0x03
-  #define EPNUM_MSC_IN      0x83
-
-#endif
-
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
-
-// full speed configuration
-uint8_t const desc_fs_configuration[] =
+uint8_t const desc_configuration[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
-  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
+  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 200),
 
-  // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64),
-
-  // Interface number, string index, EP Out & EP In address, EP size
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
+  // Interface number, Alternate count, starting string index, attributes, detach timeout, transfer size
+  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, 3, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
 };
 
-#if TUD_OPT_HIGH_SPEED
-// Per USB specs: high speed capable device must report device_qualifier and other_speed_configuration
-
-// high speed configuration
-uint8_t const desc_hs_configuration[] =
+uint8_t const desc_configuration_upgrade[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
-  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
+  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN + 9, 0x00, 200),
 
-  // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 512),
-
-  // Interface number, string index, EP Out & EP In address, EP size
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),
+  // Interface number, Alternate count, starting string index, attributes, detach timeout, transfer size
+  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, 4, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
 };
 
-// other speed configuration
-uint8_t desc_other_speed_config[CONFIG_TOTAL_LEN];
+static bool bl_upgrade_alt = false;
 
-// device qualifier is mostly similar to device descriptor since we don't change configuration based on speed
-tusb_desc_device_qualifier_t const desc_device_qualifier =
-{
-  .bLength            = sizeof(tusb_desc_device_qualifier_t),
-  .bDescriptorType    = TUSB_DESC_DEVICE_QUALIFIER,
-  .bcdUSB             = USB_BCD,
-
-  .bDeviceClass       = TUSB_CLASS_MISC,
-  .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
-  .bDeviceProtocol    = MISC_PROTOCOL_IAD,
-
-  .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
-  .bNumConfigurations = 0x01,
-  .bReserved          = 0x00
-};
-
-// Invoked when received GET DEVICE QUALIFIER DESCRIPTOR request
-// Application return pointer to descriptor, whose contents must exist long enough for transfer to complete.
-// device_qualifier descriptor describes information about a high-speed capable device that would
-// change if the device were operating at the other speed. If not highspeed capable stall this request.
-uint8_t const* tud_descriptor_device_qualifier_cb(void)
-{
-  return (uint8_t const*) &desc_device_qualifier;
+void enable_bootloader_alt(void){
+  bl_upgrade_alt = true;
 }
-
-// Invoked when received GET OTHER SEED CONFIGURATION DESCRIPTOR request
-// Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
-// Configuration descriptor in the other speed e.g if high speed then this is for full speed and vice versa
-uint8_t const* tud_descriptor_other_speed_configuration_cb(uint8_t index)
-{
-  (void) index; // for multiple configurations
-
-  // if link speed is high return fullspeed config, and vice versa
-  // Note: the descriptor type is OHER_SPEED_CONFIG instead of CONFIG
-  memcpy(desc_other_speed_config,
-         (tud_speed_get() == TUSB_SPEED_HIGH) ? desc_fs_configuration : desc_hs_configuration,
-         CONFIG_TOTAL_LEN);
-
-  desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
-
-  return desc_other_speed_config;
-}
-
-#endif // highspeed
-
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
 // Application return pointer to descriptor
@@ -223,13 +116,10 @@ uint8_t const* tud_descriptor_other_speed_configuration_cb(uint8_t index)
 uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 {
   (void) index; // for multiple configurations
-
-#if TUD_OPT_HIGH_SPEED
-  // Although we are highspeed, host may be fullspeed.
-  return (tud_speed_get() == TUSB_SPEED_HIGH) ?  desc_hs_configuration : desc_fs_configuration;
-#else
-  return desc_fs_configuration;
-#endif
+  if(bl_upgrade_alt){
+    return desc_configuration_upgrade;
+  }
+  return desc_configuration;
 }
 
 //--------------------------------------------------------------------+
@@ -239,15 +129,78 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const* string_desc_arr [] =
 {
-  (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
-  "TinyUSB",                     // 1: Manufacturer
-  "TinyUSB Device",              // 2: Product
-  "123456789012",                // 3: Serials, should use chip ID
-  "TinyUSB CDC",                 // 4: CDC Interface
-  "TinyUSB MSC",                 // 5: MSC Interface
+  (const char[]) { 0x09, 0x04 },                // 0: is supported language is English (0x0409)
+  "Good Stuff Department",                      // 1: Manufacturer
+  "butterstick (dfu)", // 2: Product
+  "",                                           // 3: Serial, derived from FLASH UUID
+  "flash @0x200000 (gateware)",                 // 4: DFU alt0 name
+  "flash @0x400000 (firmware)",                 // 5: DFU alt1 name
+  "flash @0x800000 (extra)",                    // 6: DFU alt2 name
+  "flash @0x000000 (bootloader)",               // 7: DFU alt3 name
 };
 
-static uint16_t _desc_str[32];
+// Microsoft Compatible ID Feature Descriptor
+#define MSFT_VENDOR_CODE    '~'     // Arbitrary, but should be printable ASCII
+#define MSFT_WCID_LEN       40
+
+// Microsoft OS String Descriptor. See: https://github.com/pbatard/libwdi/wiki/WCID-Devices
+static const uint16_t usb_string_microsoft = {0x0318, 'M','S','F','T','1','0','0', MSFT_VENDOR_CODE};
+ 
+// Microsoft WCID
+const uint8_t usb_microsoft_wcid[MSFT_WCID_LEN] = {
+    MSFT_WCID_LEN, 0, 0, 0,         // Length
+    0x00, 0x01,                     // Version
+    0x04, 0x00,                     // Compatibility ID descriptor index
+    0x01,                           // Number of sections
+    0, 0, 0, 0, 0, 0, 0,            // Reserved (7 bytes)
+
+    0,                              // Interface number
+    0x01,                           // Reserved
+    'W','I','N','U','S','B',0,0,    // Compatible ID
+    0,0,0,0,0,0,0,0,                // Sub-compatible ID (unused)
+    0,0,0,0,0,0,                    // Reserved
+};
+
+
+//--------------------------------------------------------------------+
+// WCID use vendor class
+//--------------------------------------------------------------------+
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request)
+{
+  // nothing to with DATA & ACK stage
+  if (stage != CONTROL_STAGE_SETUP) return true;
+
+  switch (request->bmRequestType_bit.type)
+  {
+    case TUSB_REQ_TYPE_VENDOR:
+      switch (request->bRequest)
+      {
+        case MSFT_VENDOR_CODE:
+          if ( request->wIndex == 0x0004 )
+          {
+            // Return a Microsoft Compatible ID Feature Descriptor
+            return tud_control_xfer(rhport, request, (void*) usb_microsoft_wcid, MSFT_WCID_LEN);
+          }
+          break;
+        default: break;
+      }
+    break;
+
+
+    default: break;
+  }
+
+  // stall unknown request
+  return false;
+}
+
+static uint16_t _desc_str[40];
+
+char hex(uint8_t d){
+  if(d <= 0x9)
+    return d + '0';
+  return d - 10 + 'a';
+}
 
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
@@ -255,24 +208,49 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
   (void) langid;
 
-  uint8_t chr_count;
+  size_t chr_count;
 
   if ( index == 0)
   {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
-  }else
+  }
+  else if(index == 3){
+    uint8_t uuid[8] = {0};
+
+//    spiflash_read_uuid(uuid);
+    chr_count = 19;
+
+    uint16_t* s = &_desc_str[1];
+    // Convert ASCII string into UTF-16
+    for(uint8_t i=0; i<8; i++)
+    {
+      /* Add dashes every 2 bytes */
+      if(i && !(i & 1)){
+        *s++ = '-';
+      }
+
+      *s++ = hex(uuid[i] >> 4);
+      *s++ = hex(uuid[i] & 0xF);
+    }
+  }
+  else
   {
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
+    if(index == 0xEE){
+      return usb_string_microsoft;
+    }
 
     if ( !(index < sizeof(string_desc_arr)/sizeof(string_desc_arr[0])) ) return NULL;
 
     const char* str = string_desc_arr[index];
 
     // Cap at max char
-    chr_count = (uint8_t) strlen(str);
-    if ( chr_count > 31 ) chr_count = 31;
+    chr_count = strlen(str);
+    if ( chr_count > 39 ) {
+      chr_count = 39;
+    }
 
     // Convert ASCII string into UTF-16
     for(uint8_t i=0; i<chr_count; i++)
@@ -282,7 +260,7 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
   }
 
   // first byte is length (including header), second byte is string type
-  _desc_str[0] = (TUSB_DESC_STRING << 8 ) | (2*chr_count + 2);
+  _desc_str[0] = (uint16_t)((((uint16_t)TUSB_DESC_STRING) << 8 ) | (2u*chr_count + 2u));
 
   return _desc_str;
 }

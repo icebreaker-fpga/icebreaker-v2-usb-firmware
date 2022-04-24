@@ -22,8 +22,47 @@
 #include <string.h>
 
 #include "tusb.h"
+#include "flash.h"
 
 #include "usb_ch32_usbhs_reg.h"
+
+//--------------------------------------------------------------------+
+// MACRO CONSTANT TYPEDEF PROTYPES
+//--------------------------------------------------------------------+
+typedef struct
+{
+	uint32_t address;
+	uint32_t length;
+} memory_offest;
+
+memory_offest const alt_offsets[] = {
+	{.address = 0x200000, .length = 0x600000}, /* Main Gateware */
+	{.address = 0x800000, .length = 0x400000}, /* Main Firmawre */
+	{.address = 0xC00000, .length = 0x400000}, /* Extra */
+	{.address = 0x000000, .length = 0x200000}  /* Bootloader */
+};
+
+
+static int complete_timeout;
+static bool bl_upgrade = false;
+
+/* Blink pattern
+ * - 1000 ms : device should reboot
+ * - 250 ms  : device not mounted
+ * - 1000 ms : device mounted
+ * - 2500 ms : device is suspended
+ */
+enum
+{
+	BLINK_DFU_IDLE,
+	BLINK_DFU_IDLE_BOOTLOADER,
+	BLINK_DFU_DOWNLOAD,
+	BLINK_DFU_ERROR,
+	BLINK_DFU_SLEEP,
+};
+
+static uint32_t blink_interval_ms = BLINK_DFU_IDLE;
+
 
 void cdc_task(void);
 void blink_task(void);
@@ -95,7 +134,7 @@ void board_init(void) {
   GPIO_Init(
     GPIOE, 
     &(GPIO_InitTypeDef) {
-      .GPIO_Mode = GPIO_Mode_IPU,
+      .GPIO_Mode = GPIO_Mode_IN_FLOATING,
       .GPIO_Speed = GPIO_Speed_10MHz,
       .GPIO_Pin = GPIO_Pin_3,
     }
@@ -133,17 +172,11 @@ int main() {
   while (1)
   {
     tud_task(); // tinyusb device task
-    cdc_task();
 
     blink_task();
     reset_task();
   }
-
-
-
 }
-
-
 
 //--------------------------------------------------------------------+
 // Device callbacks
@@ -172,56 +205,6 @@ void tud_resume_cb(void)
 {
 }
 
-//--------------------------------------------------------------------+
-// USB CDC
-//--------------------------------------------------------------------+
-void cdc_task(void)
-{
-  // connected() check for DTR bit
-  // Most but not all terminal client set this when making connection
-  // if ( tud_cdc_connected() )
-  {
-    // connected and there are data available
-    if ( tud_cdc_available() )
-    {
-      // read datas
-      char buf[64];
-      uint32_t count = tud_cdc_read(buf, sizeof(buf));
-      (void) count;
-
-      // Echo back
-      // Note: Skip echo by commenting out write() and write_flush()
-      // for throughput test e.g
-      //    $ dd if=/dev/zero of=/dev/ttyACM0 count=10000
-      tud_cdc_write(buf, count);
-      tud_cdc_write_flush();
-    }
-  }
-}
-
-// Invoked when cdc when line state changed e.g connected/disconnected
-void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
-{
-  (void) itf;
-  (void) rts;
-
-  // TODO set some indicator
-  if ( dtr )
-  {
-    // Terminal connected
-  }else
-  {
-    // Terminal disconnected
-  }
-}
-
-// Invoked when CDC interface received data from host
-void tud_cdc_rx_cb(uint8_t itf)
-{
-  (void) itf;
-}
-
-
 void blink_task(){
   static unsigned int _time;
   static bool _toggle;
@@ -237,8 +220,149 @@ void blink_task(){
   }
 }
 
+/* Implement a 4-press reset to bootloader, timeout from first press is 3s */
 void reset_task(){
-  if(GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_3)){
-    NVIC_SystemReset();
+  enum reset_state {
+    IDLE,
+    WINDOW
+  };
+  static uint32_t _timeout;
+  static enum reset_state _state = IDLE;
+  static uint32_t _count;
+
+  static bool last_pin_value = false;
+  bool pin_value = (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_3)) ? true : false;
+  bool edge = (pin_value == true) && (last_pin_value == false);
+  
+  switch(_state){
+    case IDLE:
+    default:
+      if(edge){
+        _state = WINDOW;
+        _timeout = board_millis();
+        _count = 0;
+      }
+      break;
+    
+    case WINDOW:
+      if(edge){
+        if(++_count >= 4){
+          NVIC_SystemReset();
+        }
+      }
+      if((board_millis() - _timeout) > 3000){
+        _state = IDLE;
+      }
+      break;
   }
+
+  last_pin_value = pin_value;
+}
+
+
+//--------------------------------------------------------------------+
+// DFU callbacks
+// Note: alt is used as the partition number, in order to support multiple partitions like FLASH, EEPROM, etc.
+//--------------------------------------------------------------------+
+
+// Invoked right before tud_dfu_download_cb() (state=DFU_DNBUSY) or tud_dfu_manifest_cb() (state=DFU_MANIFEST)
+// Application return timeout in milliseconds (bwPollTimeout) for the next download/manifest operation.
+// During this period, USB host won't try to communicate with us.
+uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
+{
+	if (state == DFU_DNBUSY)
+	{
+		return 1; /* Request we are polled in 1ms */
+	}
+	else if (state == DFU_MANIFEST)
+	{
+		// since we don't buffer entire image and do any flashing in manifest stage
+		return 0;
+	}
+
+	return 0;
+}
+
+// Invoked when received DFU_DNLOAD (wLength>0) following by DFU_GETSTATUS (state=DFU_DNBUSY) requests
+// This callback could be returned before flashing op is complete (async).
+// Once finished flashing, application must call tud_dfu_finish_flashing()
+void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, uint16_t length)
+{
+	(void)alt;
+	(void)block_num;
+
+	blink_interval_ms = BLINK_DFU_DOWNLOAD;
+
+	if ((block_num * CFG_TUD_DFU_XFER_BUFSIZE) >= alt_offsets[alt].length)
+	{
+		// flashing op for download length error
+		tud_dfu_finish_flashing(DFU_STATUS_ERR_ADDRESS);
+
+		blink_interval_ms = BLINK_DFU_ERROR;
+
+		return;
+	}
+
+	uint32_t flash_address = alt_offsets[alt].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
+
+	/* First block in 64K erase block */
+	if ((flash_address & (FLASH_64K_BLOCK_ERASE_SIZE - 1)) == 0)
+	{
+
+		//spiflash_write_enable();
+		//spiflash_sector_erase(flash_address);
+
+		/* While FLASH erase is in progress update LEDs */
+		//while (spiflash_read_status_register() & 1)
+		{
+			blink_task();
+		}
+	}
+
+	//printf("tud_dfu_download_cb(), alt=%u, block=%u, flash_address=%08x\n", alt, block_num, flash_address);
+
+	for (int i = 0; i < CFG_TUD_DFU_XFER_BUFSIZE / 256; i++)
+	{
+
+		//spiflash_write_enable();
+		//spiflash_page_program(flash_address, data, 256);
+		flash_address += 256;
+		data += 256;
+
+		/* While FLASH erase is in progress update LEDs */
+		//while (spiflash_read_status_register() & 1)
+		{
+			blink_task();
+		}
+	}
+
+	// flashing op for download complete without error
+	tud_dfu_finish_flashing(DFU_STATUS_OK);
+}
+
+// Invoked when download process is complete, received DFU_DNLOAD (wLength=0) following by DFU_GETSTATUS (state=Manifest)
+// Application can do checksum, or actual flashing if buffered entire image previously.
+// Once finished flashing, application must call tud_dfu_finish_flashing()
+void tud_dfu_manifest_cb(uint8_t alt)
+{
+	(void)alt;
+	blink_interval_ms = BLINK_DFU_DOWNLOAD;
+
+	// flashing op for manifest is complete without error
+	// Application can perform checksum, should it fail, use appropriate status such as errVERIFY.
+	tud_dfu_finish_flashing(DFU_STATUS_OK);
+}
+
+// Invoked when the Host has terminated a download or upload transfer
+void tud_dfu_abort_cb(uint8_t alt)
+{
+	(void)alt;
+	blink_interval_ms = BLINK_DFU_ERROR;
+}
+
+// Invoked when a DFU_DETACH request is received
+void tud_dfu_detach_cb(void)
+{
+	blink_interval_ms = BLINK_DFU_SLEEP;
+	//complete_timeout = 100;
 }
