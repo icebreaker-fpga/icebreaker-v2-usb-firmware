@@ -73,7 +73,7 @@ uint8_t const * tud_descriptor_device_cb(void)
 //--------------------------------------------------------------------+
 
 // Number of Alternate Interface (each for 1 flash partition)
-#define ALT_COUNT   3
+#define ALT_COUNT   1
 
 enum
 {
@@ -92,23 +92,8 @@ uint8_t const desc_configuration[] =
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 200),
 
   // Interface number, Alternate count, starting string index, attributes, detach timeout, transfer size
-  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, 3, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
+  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, 1, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
 };
-
-uint8_t const desc_configuration_upgrade[] =
-{
-  // Config number, interface count, string index, total length, attribute, power in mA
-  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN + 9, 0x00, 200),
-
-  // Interface number, Alternate count, starting string index, attributes, detach timeout, transfer size
-  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, 4, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
-};
-
-static bool bl_upgrade_alt = false;
-
-void enable_bootloader_alt(void){
-  bl_upgrade_alt = true;
-}
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
 // Application return pointer to descriptor
@@ -116,9 +101,6 @@ void enable_bootloader_alt(void){
 uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 {
   (void) index; // for multiple configurations
-  if(bl_upgrade_alt){
-    return desc_configuration_upgrade;
-  }
   return desc_configuration;
 }
 
@@ -133,10 +115,7 @@ char const* string_desc_arr [] =
   "Good Stuff Department",                      // 1: Manufacturer
   "butterstick (dfu)", // 2: Product
   "",                                           // 3: Serial, derived from FLASH UUID
-  "flash @0x200000 (gateware)",                 // 4: DFU alt0 name
-  "flash @0x400000 (firmware)",                 // 5: DFU alt1 name
-  "flash @0x800000 (extra)",                    // 6: DFU alt2 name
-  "flash @0x000000 (bootloader)",               // 7: DFU alt3 name
+  "flash @0x000000 (gateware)",                 // 4: DFU alt0 name
 };
 
 // Microsoft Compatible ID Feature Descriptor
@@ -218,7 +197,7 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
   else if(index == 3){
     uint8_t uuid[8] = {0};
 
-    SPI_Flash_ReadUUID(uuid);
+    //SPI_Flash_ReadUUID(uuid);
     chr_count = 19;
 
     uint16_t* s = &_desc_str[1];

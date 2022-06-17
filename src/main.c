@@ -34,10 +34,9 @@ typedef struct
 } memory_offest;
 
 memory_offest const alt_offsets[] = {
-	{.address = 0x200000, .length = 0x600000}, /* Main Gateware */
-	{.address = 0x800000, .length = 0x400000}, /* Main Firmawre */
-	{.address = 0xC00000, .length = 0x400000}, /* Extra */
-	{.address = 0x000000, .length = 0x200000}  /* Bootloader */
+	{.address = 0x000000, .length = 0x800000}, /* Main Gateware */
+	{.address = 0x000000, .length = 0x800000}, /* Main Firmawre */
+	{.address = 0x000000, .length = 0x800000}, /* Extra */
 };
 
 
@@ -106,8 +105,8 @@ void board_init(void) {
 
   RCC_USBCLK48MConfig(RCC_USBCLK48MCLKSource_USBPHY);
   RCC_USBHSPLLCLKConfig(RCC_HSBHSPLLCLKSource_HSE);
-  RCC_USBHSConfig(RCC_USBPLL_Div4);
-  RCC_USBHSPLLCKREFCLKConfig(RCC_USBHSPLLCKREFCLK_4M);
+  RCC_USBHSConfig(RCC_USBPLL_Div2);
+  RCC_USBHSPLLCKREFCLKConfig(RCC_USBHSPLLCKREFCLK_8M);
   RCC_USBHSPHYPLLALIVEcmd(ENABLE);
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_USBHS, ENABLE);
 
@@ -201,8 +200,6 @@ void board_init(void) {
 
   SPI_Cmd(SPI1, ENABLE);
 
-  SPI_Flash_WAKEUP();
-
   /* Enable interrupts globaly */
   __enable_irq();
 }
@@ -230,7 +227,12 @@ uint32_t board_millis(void) { return system_ticks; }
 int main() {
   
   board_init();
+  
+  SPI_Flash_WAKEUP();
+  
   tusb_init();
+
+
 
   while (1)
   {
@@ -248,6 +250,7 @@ int main() {
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
+ // GPIO_SetBits(GPIOA, GPIO_Pin_10);
 }
 
 // Invoked when device is unmounted
@@ -336,7 +339,7 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
 {
 	if (state == DFU_DNBUSY)
 	{
-		return 1; /* Request we are polled in 1ms */
+		return 5; /* Request we are polled in 1ms */
 	}
 	else if (state == DFU_MANIFEST)
 	{
@@ -369,35 +372,18 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 
 	uint32_t flash_address = alt_offsets[alt].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
 
-	/* First block in 64K erase block */
-	if ((flash_address & (FLASH_64K_BLOCK_ERASE_SIZE - 1)) == 0)
-	{
-
-		//spiflash_write_enable();
-		//spiflash_sector_erase(flash_address);
-
-		/* While FLASH erase is in progress update LEDs */
-		//while (spiflash_read_status_register() & 1)
-		{
-			blink_task();
-		}
-	}
-
-	//printf("tud_dfu_download_cb(), alt=%u, block=%u, flash_address=%08x\n", alt, block_num, flash_address);
 
 	for (int i = 0; i < CFG_TUD_DFU_XFER_BUFSIZE / 256; i++)
 	{
+    /* First block in 64K erase block */
+    if ((flash_address & (FLASH_4K_BLOCK_ERASE_SIZE - 1)) == 0)
+    {
+      SPI_Flash_Erase_Sector(flash_address);
+    }
 
-		//spiflash_write_enable();
-		//spiflash_page_program(flash_address, data, 256);
+    SPI_Flash_Write_Page(data, flash_address, 256);
 		flash_address += 256;
 		data += 256;
-
-		/* While FLASH erase is in progress update LEDs */
-		//while (spiflash_read_status_register() & 1)
-		{
-			blink_task();
-		}
 	}
 
 	// flashing op for download complete without error
@@ -428,5 +414,7 @@ void tud_dfu_abort_cb(uint8_t alt)
 void tud_dfu_detach_cb(void)
 {
 	blink_interval_ms = BLINK_DFU_SLEEP;
-	//complete_timeout = 100;
+
+  /* Release iCE40 from reset */
+  //GPIO_SetBits(GPIOA, GPIO_Pin_10);
 }

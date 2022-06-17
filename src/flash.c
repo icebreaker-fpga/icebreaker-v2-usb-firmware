@@ -220,7 +220,6 @@ void SPI_Flash_ReadUUID(u8* uuid)
  */
 void SPI_Flash_Erase_Sector(u32 Dst_Addr)
 {
-    Dst_Addr *= 4096;
     SPI_FLASH_Write_Enable();
     SPI_Flash_Wait_Busy();
     GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);

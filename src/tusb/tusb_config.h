@@ -79,7 +79,7 @@
 #endif
 
 #ifndef CFG_TUSB_MEM_ALIGN
-#define CFG_TUSB_MEM_ALIGN          __attribute__ ((aligned(4)))
+#define CFG_TUSB_MEM_ALIGN          __attribute__ ((aligned(16)))
 #endif
 
 //--------------------------------------------------------------------
