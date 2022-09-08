@@ -27,9 +27,8 @@ assert(
 )
 
 add_global_arguments([
-  '-flto',
-  '-march=rv32imafc',
-  '-mabi=ilp32f',
+  '-march=rv32imac',
+  '-mabi=ilp32',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -45,9 +44,8 @@ if get_option('usb_port') == 'hs'
   add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
 endif
 add_global_link_arguments([
-  '-flto',
-  '-march=rv32imafc',
-  '-mabi=ilp32f',
+  '-march=rv32imac',
+  '-mabi=ilp32',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -93,7 +91,7 @@ lst = custom_target(
   name + '.lst',
   input : exe,
   output : name + '.lst',
-  command : [objdump, '--all-headers', '--demangle', '--disassemble', '@INPUT@'],
+  command : [objdump, '--demangle', '--disassemble', '@INPUT@'],
   capture : true,
   depends : exe,
   build_by_default : true,
