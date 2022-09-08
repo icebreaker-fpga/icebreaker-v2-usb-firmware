@@ -47,6 +47,8 @@ typedef struct {
 #define XFER_CTL_BASE(_ep, _dir) &xfer_status[_ep][_dir]
 static xfer_ctl_t xfer_status[EP_MAX][2];
 
+static volatile uint16_t rx_cnt = 0;
+
 #define EP_TX_LEN(ep) *(volatile uint16_t *)((volatile uint16_t *)&(USBHSD->UEP0_TX_LEN) + (ep)*2)
 #define EP_TX_CTRL(ep) *(volatile uint8_t *)((volatile uint8_t *)&(USBHSD->UEP0_TX_CTRL) + (ep)*4)
 #define EP_RX_CTRL(ep) *(volatile uint8_t *)((volatile uint8_t *)&(USBHSD->UEP0_RX_CTRL) + (ep)*4)
@@ -56,10 +58,8 @@ static xfer_ctl_t xfer_status[EP_MAX][2];
 #define EP_RX_DMA_ADDR(ep) *(volatile uint32_t *)((volatile uint32_t *)&(USBHSD->UEP1_RX_DMA) + (ep - 1))
 
 /* Endpoint Buffer */
-__attribute__((aligned(4))) uint8_t setup[8];           // ep0(64)
 __attribute__((aligned(4))) uint8_t EP0_DatabufHD[64];  // ep0(64)
 
-volatile uint8_t mps_over_flag = 0;
 volatile uint8_t USBHS_Dev_Endp0_Tog = 0x01;
 
 void dcd_init(uint8_t rhport) {
@@ -73,18 +73,12 @@ void dcd_init(uint8_t rhport) {
     USBHSD->HOST_CTRL = USBHS_PHY_SUSPENDM;
 
     USBHSD->CONTROL = 0;
-#if 1
     USBHSD->CONTROL = USBHS_DMA_EN | USBHS_INT_BUSY_EN | USBHS_HIGH_SPEED;
-#else
-    USBHSD->CONTROL = USBHS_DMA_EN | USBHS_INT_BUSY_EN | USBHS_FULL_SPEED;
-#endif
 
     USBHSD->INT_EN = 0;
     USBHSD->INT_EN = USBHS_SETUP_ACT_EN | USBHS_TRANSFER_EN | USBHS_DETECT_EN | USBHS_SUSPEND_EN;
 
-    /* ALL endpoint enable */
-    USBHSD->ENDP_CONFIG = 0xffffffff;
-
+    /* EP0 Enable */
     USBHSD->ENDP_CONFIG = USBHS_EP0_T_EN | USBHS_EP0_R_EN;
     USBHSD->ENDP_TYPE = 0x00;
     USBHSD->BUF_MODE = 0x00;
@@ -98,11 +92,11 @@ void dcd_init(uint8_t rhport) {
     USBHSD->UEP0_RX_CTRL = USBHS_EP_R_RES_ACK;
 
     for (int ep = 1; ep < EP_MAX; ep++) {
+        EP_RX_MAX_LEN(ep) = 512;
+
         EP_TX_LEN(ep) = 0;
         EP_TX_CTRL(ep) = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK;
         EP_RX_CTRL(ep) = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_NAK;
-
-        EP_RX_MAX_LEN(ep) = 512;
     }
 
     USBHSD->DEV_AD = 0;
@@ -155,10 +149,15 @@ bool dcd_edpt_open(uint8_t rhport, tusb_desc_endpoint_t const *desc_edpt) {
 
     xfer_ctl_t *xfer = XFER_CTL_BASE(epnum, dir);
     xfer->max_size = tu_edpt_packet_size(desc_edpt);
+    xfer->total_len = 0;
+    xfer->queued_len = 0;
+    xfer->buffer = 0;
+    xfer->short_packet = false;
 
     if (epnum != 0) {
         if (tu_edpt_dir(desc_edpt->bEndpointAddress) == TUSB_DIR_OUT) {
-            EP_RX_CTRL(epnum) = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_ACK;
+            USBHSD->ENDP_CONFIG |= (USBHS_EP0_R_EN << epnum);
+            EP_RX_CTRL(epnum) = USBHS_EP_R_AUTOTOG | USBHS_EP_R_RES_NAK;
         } else {
             EP_TX_LEN(epnum) = 0;
             EP_TX_CTRL(epnum) = USBHS_EP_T_AUTOTOG | USBHS_EP_T_RES_NAK | USBHS_EP_T_TOG_0;
@@ -237,9 +236,9 @@ bool dcd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t *buffer, uint16_t to
         xfer->short_packet = true;
     }
 
-    if (tu_edpt_dir(ep_addr) == TUSB_DIR_IN) {
+    if (dir == TUSB_DIR_IN) {
         if (!total_bytes) {
-            xfer->short_packet = true;
+            //xfer->short_packet = true;
             if (epnum == 0) {
                 USBHSD->UEP0_TX_LEN = 0;
                 USBHSD->UEP0_TX_CTRL = USBHS_EP_T_RES_ACK | (USBHS_Dev_Endp0_Tog ? USBHS_EP_T_TOG_1 : USBHS_EP_T_TOG_0);
@@ -249,16 +248,16 @@ bool dcd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t *buffer, uint16_t to
                 EP_TX_CTRL(epnum) = (EP_TX_CTRL(epnum) & ~(USBHS_EP_T_RES_MASK)) | USBHS_EP_T_RES_ACK;
             }
         } else {
+            xfer->queued_len += short_packet_size;
+
             if (epnum == 0) {
-                xfer->queued_len += short_packet_size;
                 memcpy(&EP0_DatabufHD[0], buffer, short_packet_size);
 
                 USBHSD->UEP0_TX_LEN = short_packet_size;
                 USBHSD->UEP0_TX_CTRL = USBHS_EP_T_RES_ACK | (USBHS_Dev_Endp0_Tog ? USBHS_EP_T_TOG_1 : USBHS_EP_T_TOG_0);
                 USBHS_Dev_Endp0_Tog ^= 1;
             } else {
-                xfer->queued_len += short_packet_size;
-                
+
                 EP_TX_DMA_ADDR(epnum) = (uint32_t)buffer;
                 USBHSD->ENDP_CONFIG |= (USBHS_EP0_T_EN << epnum);
                 EP_TX_LEN(epnum) = short_packet_size;
@@ -267,21 +266,20 @@ bool dcd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t *buffer, uint16_t to
         }
     } else { /* TUSB_DIR_OUT */
         if (epnum == 0) {
-            uint32_t read_count = USBHSD->RX_LEN;
-            read_count = TU_MIN(read_count, total_bytes);
+            if(rx_cnt > 0){
+                memcpy(buffer, EP0_DatabufHD, rx_cnt);
+                dcd_event_xfer_complete(0, ep_addr, rx_cnt, XFER_RESULT_SUCCESS, false);
 
-            if ((total_bytes == 8)) {
-                read_count = 8;
-                memcpy(buffer, &EP0_DatabufHD[0], 8);
-            } else {
-                memcpy(buffer, &EP0_DatabufHD[0], read_count);
+                rx_cnt = 0;
+                xfer->buffer = 0;
+                
+                USBHSD->UEP0_RX_CTRL = (USBHSD->UEP0_RX_CTRL & ~(USBHS_EP_R_RES_MASK)) | USBHS_EP_R_RES_ACK;
             }
         } else {
             EP_RX_DMA_ADDR(epnum) = (uint32_t)xfer->buffer;
             USBHSD->ENDP_CONFIG |= (USBHS_EP0_R_EN << epnum);
+            EP_RX_CTRL(epnum) = (EP_RX_CTRL(epnum) & ~(USBHS_EP_R_RES_MASK)) | USBHS_EP_R_RES_ACK;
         }
-
-        // usbd_ep_read(ep_addr, buffer, total_bytes, &ret_bytes);
     }
     return true;
 }
@@ -321,6 +319,7 @@ void dcd_int_handler(uint8_t rhport) {
     intflag = USBHSD->INT_FG;
 
     if (intflag & USBHS_TRANSFER_FLAG) {
+        USBHSD->INT_FG = USBHS_TRANSFER_FLAG; /* Clear flag */
 
         end_num = (USBHSD->INT_ST) & MASK_UIS_ENDP;
         rx_token = (((USBHSD->INT_ST) & MASK_UIS_TOKEN) >> 4) & 0x03;
@@ -334,14 +333,22 @@ void dcd_int_handler(uint8_t rhport) {
 
             receive_packet(xfer, rx_len);
 
+            if (end_num == 0) {
+                if((xfer->buffer == 0) && rx_len){
+                    rx_cnt = rx_len;
+                    USBHSD->UEP0_RX_CTRL = (USBHSD->UEP0_RX_CTRL & ~USBHS_EP_R_RES_MASK) | USBHS_EP_R_RES_NAK;
+                    return;
+                }else{
+                    if(xfer->total_len <= xfer->queued_len){
+                        memcpy(xfer->buffer, EP0_DatabufHD, rx_len);
+                    }
+                }
+            }
+
             if (xfer->short_packet || (xfer->queued_len == xfer->total_len)) {
                 xfer->short_packet = false;
 
                 dcd_event_xfer_complete(0, endp, xfer->queued_len, XFER_RESULT_SUCCESS, true);
-            }
-
-            if (end_num == 0) {
-                USBHSD->UEP0_RX_CTRL = USBHS_EP_R_RES_ACK | USBHS_EP_R_TOG_0;
             }
 
         } else if (rx_token == PID_IN) {
@@ -359,7 +366,6 @@ void dcd_int_handler(uint8_t rhport) {
             }
         }
 
-        USBHSD->INT_FG = USBHS_TRANSFER_FLAG; /* Clear flag */
     } else if (intflag & USBHS_SETUP_FLAG) {
         USBHS_Dev_Endp0_Tog = 1;
         dcd_event_setup_received(0, EP0_DatabufHD, true);

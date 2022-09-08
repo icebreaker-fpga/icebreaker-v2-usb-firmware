@@ -398,7 +398,7 @@ void tud_dfu_manifest_cb(uint8_t alt)
 	(void)alt;
 	blink_interval_ms = BLINK_DFU_DOWNLOAD;
 
-	// flashing op for manifest is complete without error
+  // flashing op for manifest is complete without error
 	// Application can perform checksum, should it fail, use appropriate status such as errVERIFY.
 	tud_dfu_finish_flashing(DFU_STATUS_OK);
 }
@@ -416,5 +416,5 @@ void tud_dfu_detach_cb(void)
 	blink_interval_ms = BLINK_DFU_SLEEP;
 
   /* Release iCE40 from reset */
-  //GPIO_SetBits(GPIOA, GPIO_Pin_10);
+  GPIO_SetBits(GPIOA, GPIO_Pin_10);
 }

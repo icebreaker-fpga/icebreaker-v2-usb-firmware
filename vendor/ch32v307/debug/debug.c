@@ -107,12 +107,17 @@ void USART_Printf_Init(uint32_t baudrate)
 
 #elif(DEBUG == DEBUG_UART3)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+    /* Remap */
+    GPIO_PinRemapConfig(GPIO_FullRemap_USART3, ENABLE);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
+    GPIO_Init(GPIOD, &GPIO_InitStructure);
+
 
 #endif
 
@@ -168,26 +173,5 @@ __attribute__((used)) int _write(int fd, char *buf, int size)
 
     return size;
 }
-
-/*********************************************************************
- * @fn      _sbrk
- *
- * @brief   Change the spatial position of data segment.
- *
- * @return  size: Data length
- */
-void *_sbrk(ptrdiff_t incr)
-{
-    extern char _end[];
-    extern char _heap_end[];
-    static char *curbrk = _end;
-
-    if ((curbrk + incr < _end) || (curbrk + incr > _heap_end))
-    return NULL - 1;
-
-    curbrk += incr;
-    return curbrk - incr;
-}
-
 
 
