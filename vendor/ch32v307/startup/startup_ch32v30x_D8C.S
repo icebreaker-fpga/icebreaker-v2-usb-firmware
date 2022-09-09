@@ -136,7 +136,7 @@ _vector_base:
     .word   DMA2_Channel10_IRQHandler  /* DMA2 Channel 10 */
     .word   DMA2_Channel11_IRQHandler  /* DMA2 Channel 11 */
 
-    //.option rvc;
+    .option rvc;
 
     .section    .text.vector_handler, "ax", @progbits
     .weak   NMI_Handler                /* NMI */
@@ -334,7 +334,7 @@ DMA2_Channel11_IRQHandler:  1:  j 1b
 
 	.section	.text.handle_reset,"ax",@progbits
 	.weak	handle_reset
-	.align	1
+	.align	4
 handle_reset:
 .option push 
 .option	norelax 
