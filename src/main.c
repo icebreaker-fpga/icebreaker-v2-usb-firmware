@@ -38,7 +38,6 @@ typedef struct
 memory_offest const alt_offsets[] = {
 	{.address = 0x000000, .length = 0x800000}, /* Main Gateware */
 	{.address = 0x000000, .length = 0x800000}, /* Main Firmawre */
-	{.address = 0x000000, .length = 0x800000}, /* Extra */
 };
 
 
@@ -341,7 +340,7 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
 {
 	if (state == DFU_DNBUSY)
 	{
-		return 1; /* Request we are polled in 1ms */
+		return 0; /* Request we are polled in 1ms */
 	}
 	else if (state == DFU_MANIFEST)
 	{
@@ -351,6 +350,9 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
 	return 0;
 }
 
+void dfu_download_flash(uint16_t block_num, uint8_t const *data, uint16_t length);
+void dfu_download_sram(uint16_t block_num, uint8_t const *data, uint16_t length);
+
 // Invoked when received DFU_DNLOAD (wLength>0) following by DFU_GETSTATUS (state=DFU_DNBUSY) requests
 // This callback could be returned before flashing op is complete (async).
 // Once finished flashing, application must call tud_dfu_finish_flashing()
@@ -359,15 +361,26 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 	(void)alt;
 	(void)block_num;
 
+  if(alt == 0){
+    dfu_download_flash(block_num, data, length);
+  }
+  else{
+    dfu_download_sram(block_num, data, length);
+  }
+
+}
+
+void dfu_download_flash(uint16_t block_num, uint8_t const *data, uint16_t length){
   if(!is_flash_spi_inited()){
     ice40_reset_hold();
     flash_spi_init();
+    GPIO_SetBits(GPIOE, GPIO_Pin_13);
     SPI_Flash_WAKEUP();
   }
 
 	blink_interval_ms = BLINK_DFU_DOWNLOAD;
 
-	if ((block_num * CFG_TUD_DFU_XFER_BUFSIZE) >= alt_offsets[alt].length)
+	if ((block_num * CFG_TUD_DFU_XFER_BUFSIZE) >= alt_offsets[0].length)
 	{
 		// flashing op for download length error
 		tud_dfu_finish_flashing(DFU_STATUS_ERR_ADDRESS);
@@ -377,7 +390,7 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 		return;
 	}
 
-	uint32_t flash_address = alt_offsets[alt].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
+	uint32_t flash_address = alt_offsets[0].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
 
 
 	for (int i = 0; i < CFG_TUD_DFU_XFER_BUFSIZE / 256; i++)
@@ -392,6 +405,40 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 		flash_address += 256;
 		data += 256;
 	}
+
+	// flashing op for download complete without error
+	tud_dfu_finish_flashing(DFU_STATUS_OK);
+}
+
+
+void dfu_download_sram(uint16_t block_num, uint8_t const *data, uint16_t length){
+  
+  if(!is_ice40_spi_inited()){
+    ice40_reset_hold();
+    //GPIO_ResetBits(GPIOE, GPIO_Pin_13); /* Disconnect ice40 CS from FLASH CS */
+  
+    ice40_spi_init();
+    ice40_reset_release();
+    delay_Ms(3);
+    GPIO_SetBits(GPIOB, GPIO_Pin_12);
+    delay_Ms(1);
+
+    SPI_I2S_SendData(SPI2, 0xFF); /* 8 dummy clocks */
+    while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));
+    delay_Ms(1);
+    
+    GPIO_ResetBits(GPIOB, GPIO_Pin_12);
+
+  }
+
+	blink_interval_ms = BLINK_DFU_DOWNLOAD;
+
+  uint8_t* c = data;
+  for(int i = 0; i < length; i++){
+    
+    while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));
+    SPI_I2S_SendData(SPI2, *c++);
+  }
 
 	// flashing op for download complete without error
 	tud_dfu_finish_flashing(DFU_STATUS_OK);
@@ -422,6 +469,24 @@ void tud_dfu_detach_cb(void)
 {
 	blink_interval_ms = BLINK_DFU_SLEEP;
 
-  flash_spi_deinit();
-  ice40_reset_release();
+  if(is_ice40_spi_inited()){
+
+    for(int i = 0; i <= 149/8; i++){
+      while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));
+      SPI_I2S_SendData(SPI2, 0xFF); /* 149 dummy clocks */
+    }
+    delay_Ms(2);
+    GPIO_SetBits(GPIOB, GPIO_Pin_12);
+    ice40_spi_deinit();
+
+  }else{
+
+    flash_spi_deinit();
+    GPIO_SetBits(GPIOE, GPIO_Pin_13);
+
+    ice40_reset_release();
+
+  }
+    
+
 }
