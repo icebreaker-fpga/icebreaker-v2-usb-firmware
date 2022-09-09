@@ -112,10 +112,10 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 char const* string_desc_arr [] =
 {
   (const char[]) { 0x09, 0x04 },                // 0: is supported language is English (0x0409)
-  "Good Stuff Department",                      // 1: Manufacturer
+  "1BitSqured",                                 // 1: Manufacturer
   "iCEBreaker v1.99 (dfu)",                     // 2: Product
   "",                                           // 3: Serial, derived from FLASH UUID
-  "flash @0x000000 (gateware)",                 // 4: DFU alt0 name
+  "ice40 flash gateware",                       // 4: DFU alt0 name
   "ice40 sram gateware",                        // 5: DFU alt0 name
 };
 
