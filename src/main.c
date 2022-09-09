@@ -70,7 +70,7 @@ void reset_task(void);
 //--------------------------------------------------------------------+
 
 
-__attribute__ ((naked)) void USBHS_IRQHandler(void) { 
+__attribute__ ((naked,aligned(4))) void USBHS_IRQHandler(void) { 
   tud_int_handler(0); 
   __asm volatile ("mret");
 }
@@ -242,12 +242,12 @@ void board_init(void) {
 volatile uint32_t system_ticks = 0;
 
 /* Small workaround to support HW stack save/restore */
-void SysTick_Handler(void) __attribute__((naked));
+void SysTick_Handler(void) __attribute__((naked,aligned(4)));
 void SysTick_Handler(void) { 
       __asm volatile ("call SysTick_Handler_impl; mret");
 }
 
-__attribute__((used)) void SysTick_Handler_impl(void) { 
+__attribute__((used,aligned(4))) void SysTick_Handler_impl(void) { 
   SysTick->SR=0;
   system_ticks++;
 }
@@ -256,7 +256,7 @@ uint32_t board_millis(void) { return system_ticks; }
 
 #endif
 
-
+__attribute__ ((aligned(4)))
 int main() {
   
   board_init();
@@ -371,20 +371,16 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
 {
 	if (state == DFU_DNBUSY)
 	{
-		return 5; /* Request we are polled in 1ms */
+		return 1; /* Request we are polled in 1ms */
 	}
 	else if (state == DFU_MANIFEST)
 	{
 		// since we don't buffer entire image and do any flashing in manifest stage
-		return 5;
+		return 1;
 	}
 
 	return 0;
 }
-
-int offset = 0;
-uint8_t buffer[256];
-uint32_t flash_address;
 
 // Invoked when received DFU_DNLOAD (wLength>0) following by DFU_GETSTATUS (state=DFU_DNBUSY) requests
 // This callback could be returned before flashing op is complete (async).
@@ -406,22 +402,20 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 		return;
 	}
 
-	flash_address = alt_offsets[alt].address + (block_num * CFG_TUD_DFU_XFER_BUFSIZE);
+	uint32_t flash_address = alt_offsets[alt].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
 
-  /* First block in 64K erase block */
-  if ((flash_address & (FLASH_4K_BLOCK_ERASE_SIZE - 1)) == 0)
-  {
-    SPI_Flash_Erase_Sector(flash_address);
-  }
-  
-  /* Buffer 256 bytes of data to write */
-  memcpy(&buffer[offset], data, length);
-  offset += length;
-  flash_address += length;
 
-  if(offset >= 256){
-    SPI_Flash_Write_Page(buffer, flash_address - offset, 256);
-    offset = 0;
+	for (int i = 0; i < CFG_TUD_DFU_XFER_BUFSIZE / 256; i++)
+	{
+    /* First block in 64K erase block */
+    if ((flash_address & (FLASH_4K_BLOCK_ERASE_SIZE - 1)) == 0)
+    {
+      SPI_Flash_Erase_Sector(flash_address);
+    }
+
+    SPI_Flash_Write_Page(data, flash_address, 256);
+		flash_address += 256;
+		data += 256;
 	}
 
 	// flashing op for download complete without error
@@ -435,12 +429,6 @@ void tud_dfu_manifest_cb(uint8_t alt)
 {
 	(void)alt;
 	blink_interval_ms = BLINK_DFU_DOWNLOAD;
-
-  /* Flash remaining bytes */
-  if(offset >= 0){
-    SPI_Flash_Write_Page(buffer, flash_address - offset, 256);
-	}
-  offset = 0;
 
   // flashing op for manifest is complete without error
 	// Application can perform checksum, should it fail, use appropriate status such as errVERIFY.
