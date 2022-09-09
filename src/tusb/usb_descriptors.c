@@ -124,7 +124,7 @@ char const* string_desc_arr [] =
 #define MSFT_WCID_LEN       40
 
 // Microsoft OS String Descriptor. See: https://github.com/pbatard/libwdi/wiki/WCID-Devices
-static const uint16_t usb_string_microsoft = {0x0318, 'M','S','F','T','1','0','0', MSFT_VENDOR_CODE};
+static const uint16_t usb_string_microsoft[] = {0x0318, 'M','S','F','T','1','0','0', MSFT_VENDOR_CODE};
  
 // Microsoft WCID
 const uint8_t usb_microsoft_wcid[MSFT_WCID_LEN] = {

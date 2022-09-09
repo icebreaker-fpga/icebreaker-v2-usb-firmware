@@ -26,7 +26,7 @@ assert(
   'Microcontroller projects can only be built in a cross build environment.',
 )
 
-add_global_arguments([
+c_args = [
   '-march=rv32ima',
   '-mabi=ilp32',
   '-O3',
@@ -41,7 +41,7 @@ add_global_arguments([
   '-DCONFIG_USB_HS',
   '-DTUP_DCD_ENDPOINT_MAX=4',
   '-fstack-usage',
-], language: ['c', 'cpp'])
+]
 if get_option('usb_port') == 'hs'
   c_args += '-DCONFIG_USB_HS'
 endif
@@ -59,7 +59,7 @@ if get_option('board') == 'ch32v307v-r1'
 elif get_option('board') == 'icebreaker-v1.99a'
   c_args += '-DDEBUG=3'
 endif
-add_global_link_arguments([
+link_args = [
   '-march=rv32ima',
   '-mabi=ilp32',
   '-msmall-data-limit=8',
@@ -84,10 +84,10 @@ subdir('src')
 name = 'icebreaker-ch32v307-usb'
 exe = executable(
   name + '.elf',
-  [src, ch32v307_src, cherryusb_src],
+  [src, ch32v307_src, tusb_src],
   c_args : c_args,
   cpp_args : c_args,
-  include_directories : [inc, ch32v307_inc, cherryusb_inc],
+  include_directories : [inc, ch32v307_inc, tusb_inc],
   implicit_include_directories : false,
   link_args : link_args,
   link_depends : [ch32v307_link_depends],

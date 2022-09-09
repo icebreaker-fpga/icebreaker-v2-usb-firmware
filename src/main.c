@@ -40,10 +40,6 @@ memory_offest const alt_offsets[] = {
 	{.address = 0x000000, .length = 0x800000}, /* Main Firmawre */
 };
 
-
-static int complete_timeout;
-static bool bl_upgrade = false;
-
 /* Blink pattern
  * - 1000 ms : device should reboot
  * - 250 ms  : device not mounted
@@ -401,7 +397,7 @@ void dfu_download_flash(uint16_t block_num, uint8_t const *data, uint16_t length
       SPI_Flash_Erase_Sector(flash_address);
     }
 
-    SPI_Flash_Write_Page(data, flash_address, 256);
+    SPI_Flash_Write_Page((uint8_t*)data, flash_address, 256);
 		flash_address += 256;
 		data += 256;
 	}
@@ -433,7 +429,7 @@ void dfu_download_sram(uint16_t block_num, uint8_t const *data, uint16_t length)
 
 	blink_interval_ms = BLINK_DFU_DOWNLOAD;
 
-  uint8_t* c = data;
+  uint8_t const *c = data;
   for(int i = 0; i < length; i++){
     
     while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));

@@ -20,9 +20,11 @@
 #define DEBUG_UART3    3
 
 /* DEBUG UATR Definition */
-//#define DEBUG   DEBUG_UART1
+#ifndef DEBUG
+#define DEBUG   DEBUG_UART1
 //#define DEBUG   DEBUG_UART2
-#define DEBUG   DEBUG_UART3
+//#define DEBUG   DEBUG_UART3
+#endif
 
 void USART_Printf_Init(uint32_t baudrate);
 
