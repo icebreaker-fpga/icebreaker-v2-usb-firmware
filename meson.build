@@ -27,7 +27,7 @@ assert(
 )
 
 add_global_arguments([
-  '-march=rv32imac',
+  '-march=rv32ima',
   '-mabi=ilp32',
   '-O3',
   '-msmall-data-limit=8',
@@ -40,12 +40,13 @@ add_global_arguments([
 	'-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
   '-DCONFIG_USB_HS',
   '-DTUP_DCD_ENDPOINT_MAX=4',
+  '-fstack-usage',
 ], language: ['c', 'cpp'])
 if get_option('usb_port') == 'hs'
   add_global_arguments('-DCONFIG_USB_HS', language: ['c', 'cpp'])
 endif
 add_global_link_arguments([
-  '-march=rv32imac',
+  '-march=rv32ima',
   '-mabi=ilp32',
   '-msmall-data-limit=8',
   '-mno-save-restore',
