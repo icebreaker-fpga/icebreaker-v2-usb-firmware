@@ -29,6 +29,7 @@ assert(
 add_global_arguments([
   '-march=rv32imac',
   '-mabi=ilp32',
+  '-O3',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -53,8 +54,8 @@ add_global_link_arguments([
   '-ffunction-sections',
   '-fdata-sections',
   '-nostartfiles',
-  '-Xlinker',
-  '--gc-sections',
+  '-Xlinker', '-Map=output.map',
+  '-Xlinker', '--gc-sections',
   '--specs=nano.specs',
   '--specs=nosys.specs',
 ], language: ['c', 'cpp'])

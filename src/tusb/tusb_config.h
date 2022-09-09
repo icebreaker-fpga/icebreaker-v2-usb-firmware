@@ -90,6 +90,8 @@
 #define CFG_TUD_ENDPOINT0_SIZE    64
 #endif
 
+#define CFG_TUSB_DEBUG 1
+
 //------------- CLASS -------------//
 #define CFG_TUD_DFU              1
 

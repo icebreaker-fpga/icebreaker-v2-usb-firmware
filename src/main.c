@@ -69,13 +69,10 @@ void reset_task(void);
 // Forward USB interrupt events to TinyUSB IRQ Handler
 //--------------------------------------------------------------------+
 
-void USBHS_IRQHandler(void) __attribute__((naked));
-void USBHS_IRQHandler(void) { 
-        __asm volatile ("call USBHS_IRQHandler_impl; mret");
-}
 
-__attribute__ ((used)) void USBHS_IRQHandler_impl(void) { 
+__attribute__ ((naked)) void USBHS_IRQHandler(void) { 
   tud_int_handler(0); 
+  __asm volatile ("mret");
 }
 
 
@@ -115,10 +112,6 @@ void board_init(void) {
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOE, ENABLE);
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOC, &GPIO_InitStructure);
 
   GPIO_Init(
     GPIOC, 
@@ -126,6 +119,15 @@ void board_init(void) {
       .GPIO_Mode = GPIO_Mode_Out_PP,
       .GPIO_Speed = GPIO_Speed_10MHz,
       .GPIO_Pin = GPIO_Pin_2,
+    }
+  );
+  
+  GPIO_Init(
+    GPIOC, 
+    &(GPIO_InitTypeDef) {
+      .GPIO_Mode = GPIO_Mode_Out_PP,
+      .GPIO_Speed = GPIO_Speed_10MHz,
+      .GPIO_Pin = GPIO_Pin_3,
     }
   );
 
@@ -137,6 +139,25 @@ void board_init(void) {
       .GPIO_Pin = GPIO_Pin_3,
     }
   );
+  GPIO_Init(
+    GPIOE, 
+    &(GPIO_InitTypeDef) {
+      .GPIO_Mode = GPIO_Mode_IN_FLOATING,
+      .GPIO_Speed = GPIO_Speed_10MHz,
+      .GPIO_Pin = GPIO_Pin_2,
+    }
+  );
+
+  GPIO_Init(
+    GPIOE, 
+    &(GPIO_InitTypeDef) {
+      .GPIO_Mode = GPIO_Mode_Out_PP,
+      .GPIO_Speed = GPIO_Speed_10MHz,
+      .GPIO_Pin = GPIO_Pin_13,
+    }
+  );
+  GPIO_SetBits(GPIOE, GPIO_Pin_13);
+
 
   /* iCE Reset PA10 */
   GPIO_Init(
@@ -148,6 +169,18 @@ void board_init(void) {
     }
   );
   GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+
+  /* iCE Clk PA8 */
+  GPIO_Init(
+    GPIOA, 
+    &(GPIO_InitTypeDef) {
+      .GPIO_Mode = GPIO_Mode_AF_PP,
+      .GPIO_Speed = GPIO_Speed_50MHz,
+      .GPIO_Pin = GPIO_Pin_8,
+    }
+  );
+  RCC_MCOConfig(RCC_MCO_XT1);
+  
 
   /* SPI config */
 
@@ -275,14 +308,13 @@ void blink_task(){
   static unsigned int _time;
   static bool _toggle;
 
-
   if((board_millis() - _time) > 250){
     _time = board_millis();
 
     if(_toggle ^= 1){
-      GPIO_ResetBits(GPIOC, 4);
+      GPIO_ResetBits(GPIOC, GPIO_Pin_3);
     }else{
-      GPIO_SetBits(GPIOC, 4);
+      GPIO_SetBits(GPIOC, GPIO_Pin_3);
     }
   }
 }
@@ -344,11 +376,15 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
 	else if (state == DFU_MANIFEST)
 	{
 		// since we don't buffer entire image and do any flashing in manifest stage
-		return 0;
+		return 5;
 	}
 
 	return 0;
 }
+
+int offset = 0;
+uint8_t buffer[256];
+uint32_t flash_address;
 
 // Invoked when received DFU_DNLOAD (wLength>0) following by DFU_GETSTATUS (state=DFU_DNBUSY) requests
 // This callback could be returned before flashing op is complete (async).
@@ -370,20 +406,22 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 		return;
 	}
 
-	uint32_t flash_address = alt_offsets[alt].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
+	flash_address = alt_offsets[alt].address + (block_num * CFG_TUD_DFU_XFER_BUFSIZE);
 
+  /* First block in 64K erase block */
+  if ((flash_address & (FLASH_4K_BLOCK_ERASE_SIZE - 1)) == 0)
+  {
+    SPI_Flash_Erase_Sector(flash_address);
+  }
+  
+  /* Buffer 256 bytes of data to write */
+  memcpy(&buffer[offset], data, length);
+  offset += length;
+  flash_address += length;
 
-	for (int i = 0; i < CFG_TUD_DFU_XFER_BUFSIZE / 256; i++)
-	{
-    /* First block in 64K erase block */
-    if ((flash_address & (FLASH_4K_BLOCK_ERASE_SIZE - 1)) == 0)
-    {
-      SPI_Flash_Erase_Sector(flash_address);
-    }
-
-    SPI_Flash_Write_Page(data, flash_address, 256);
-		flash_address += 256;
-		data += 256;
+  if(offset >= 256){
+    SPI_Flash_Write_Page(buffer, flash_address - offset, 256);
+    offset = 0;
 	}
 
 	// flashing op for download complete without error
@@ -397,6 +435,12 @@ void tud_dfu_manifest_cb(uint8_t alt)
 {
 	(void)alt;
 	blink_interval_ms = BLINK_DFU_DOWNLOAD;
+
+  /* Flash remaining bytes */
+  if(offset >= 0){
+    SPI_Flash_Write_Page(buffer, flash_address - offset, 256);
+	}
+  offset = 0;
 
   // flashing op for manifest is complete without error
 	// Application can perform checksum, should it fail, use appropriate status such as errVERIFY.
@@ -414,6 +458,29 @@ void tud_dfu_abort_cb(uint8_t alt)
 void tud_dfu_detach_cb(void)
 {
 	blink_interval_ms = BLINK_DFU_SLEEP;
+
+
+
+  /* Hold iCE40 in reset */
+  GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
 
   /* Release iCE40 from reset */
   GPIO_SetBits(GPIOA, GPIO_Pin_10);
