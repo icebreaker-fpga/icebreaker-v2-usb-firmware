@@ -73,7 +73,7 @@ uint8_t const * tud_descriptor_device_cb(void)
 //--------------------------------------------------------------------+
 
 // Number of Alternate Interface (each for 1 flash partition)
-#define ALT_COUNT   1
+#define ALT_COUNT   2
 
 enum
 {
@@ -84,7 +84,7 @@ enum
 #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_DFU_DESC_LEN(ALT_COUNT))
 
 
-#define FUNC_ATTRS (DFU_ATTR_WILL_DETACH | DFU_ATTR_CAN_DOWNLOAD | DFU_ATTR_MANIFESTATION_TOLERANT)
+#define FUNC_ATTRS (DFU_ATTR_CAN_DOWNLOAD | DFU_ATTR_MANIFESTATION_TOLERANT)
 
 uint8_t const desc_configuration[] =
 {
@@ -92,7 +92,7 @@ uint8_t const desc_configuration[] =
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 200),
 
   // Interface number, Alternate count, starting string index, attributes, detach timeout, transfer size
-  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, 1, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
+  TUD_DFU_DESCRIPTOR(ITF_NUM_DFU_MODE, ALT_COUNT, 4, FUNC_ATTRS, 50, CFG_TUD_DFU_XFER_BUFSIZE),
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -113,9 +113,10 @@ char const* string_desc_arr [] =
 {
   (const char[]) { 0x09, 0x04 },                // 0: is supported language is English (0x0409)
   "Good Stuff Department",                      // 1: Manufacturer
-  "butterstick (dfu)", // 2: Product
+  "iCEBreaker v1.99 (dfu)",                     // 2: Product
   "",                                           // 3: Serial, derived from FLASH UUID
   "flash @0x000000 (gateware)",                 // 4: DFU alt0 name
+  "ice40 sram gateware",                        // 5: DFU alt0 name
 };
 
 // Microsoft Compatible ID Feature Descriptor

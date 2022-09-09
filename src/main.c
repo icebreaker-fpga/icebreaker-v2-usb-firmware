@@ -23,6 +23,8 @@
 
 #include "tusb.h"
 #include "flash.h"
+#include "time.h"
+#include "platform.h"
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -107,8 +109,6 @@ void board_init(void) {
   RCC_USBHSPHYPLLALIVEcmd(ENABLE);
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_USBHS, ENABLE);
 
-  GPIO_InitTypeDef GPIO_InitStructure = {0};
-
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOE, ENABLE);
@@ -182,57 +182,6 @@ void board_init(void) {
   RCC_MCOConfig(RCC_MCO_XT1);
   
 
-  /* SPI config */
-
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
-
-  SPI_InitTypeDef  SPI_InitStructure = {0};
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOC, &GPIO_InitStructure);
-  GPIO_SetBits(GPIOC, GPIO_Pin_10);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOC, &GPIO_InitStructure);
-  GPIO_SetBits(GPIOC, GPIO_Pin_11);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-  GPIO_SetBits(GPIOA, GPIO_Pin_4);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(SPI1, &SPI_InitStructure);
-
-  SPI_Cmd(SPI1, ENABLE);
-
   /* Enable interrupts globaly */
   __enable_irq();
 }
@@ -261,7 +210,17 @@ int main() {
   
   board_init();
   
+
+  ice40_reset_hold();
+  flash_spi_init();
+  
+  /* Read out UUID and cache it, used by USB system for descriptors */
   SPI_Flash_WAKEUP();
+  SPI_Flash_ReadUUID(NULL);
+
+  flash_spi_deinit();
+  ice40_reset_release();
+
   
   tusb_init();
 
@@ -283,7 +242,7 @@ int main() {
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
- // GPIO_SetBits(GPIOA, GPIO_Pin_10);
+
 }
 
 // Invoked when device is unmounted
@@ -308,13 +267,24 @@ void blink_task(){
   static unsigned int _time;
   static bool _toggle;
 
-  if((board_millis() - _time) > 250){
+  if((board_millis() - _time) > 20){
     _time = board_millis();
 
-    if(_toggle ^= 1){
-      GPIO_ResetBits(GPIOC, GPIO_Pin_3);
-    }else{
-      GPIO_SetBits(GPIOC, GPIO_Pin_3);
+    switch(blink_interval_ms){
+      case BLINK_DFU_DOWNLOAD:{
+        if(_toggle ^= 1){
+          GPIO_ResetBits(GPIOC, GPIO_Pin_3);
+          GPIO_SetBits(GPIOC, GPIO_Pin_2);
+        }else{
+          GPIO_SetBits(GPIOC, GPIO_Pin_3);
+          GPIO_ResetBits(GPIOC, GPIO_Pin_2);
+        }
+      } break;
+
+      default:{
+          GPIO_ResetBits(GPIOC, GPIO_Pin_3);
+          GPIO_ResetBits(GPIOC, GPIO_Pin_2);
+      } break;
     }
   }
 }
@@ -375,8 +345,7 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
 	}
 	else if (state == DFU_MANIFEST)
 	{
-		// since we don't buffer entire image and do any flashing in manifest stage
-		return 1;
+		return 0; // since we don't buffer entire image and do any flashing in manifest stage
 	}
 
 	return 0;
@@ -389,6 +358,12 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 {
 	(void)alt;
 	(void)block_num;
+
+  if(!is_flash_spi_inited()){
+    ice40_reset_hold();
+    flash_spi_init();
+    SPI_Flash_WAKEUP();
+  }
 
 	blink_interval_ms = BLINK_DFU_DOWNLOAD;
 
@@ -428,7 +403,7 @@ void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, u
 void tud_dfu_manifest_cb(uint8_t alt)
 {
 	(void)alt;
-	blink_interval_ms = BLINK_DFU_DOWNLOAD;
+	blink_interval_ms = BLINK_DFU_IDLE;
 
   // flashing op for manifest is complete without error
 	// Application can perform checksum, should it fail, use appropriate status such as errVERIFY.
@@ -447,29 +422,6 @@ void tud_dfu_detach_cb(void)
 {
 	blink_interval_ms = BLINK_DFU_SLEEP;
 
-
-
-  /* Hold iCE40 in reset */
-  GPIO_ResetBits(GPIOA, GPIO_Pin_10);
-
-  GPIO_InitTypeDef GPIO_InitStructure;
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-
-  /* Release iCE40 from reset */
-  GPIO_SetBits(GPIOA, GPIO_Pin_10);
+  flash_spi_deinit();
+  ice40_reset_release();
 }

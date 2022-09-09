@@ -196,17 +196,28 @@ u16 SPI_Flash_ReadID(void)
  */
 void SPI_Flash_ReadUUID(u8* uuid)
 {
-    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
-    SPI1_ReadWriteByte(0x48);
-    SPI1_ReadWriteByte(0x00);
-    SPI1_ReadWriteByte(0x00);
-    SPI1_ReadWriteByte(0x00);
-    SPI1_ReadWriteByte(0x00);
+    static u8 _uuid[8];
+    static bool _cached = false;
+    
+    if(_cached == false){
+        GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+        SPI1_ReadWriteByte(0x48);
+        SPI1_ReadWriteByte(0x00);
+        SPI1_ReadWriteByte(0x00);
+        SPI1_ReadWriteByte(0x00);
+        SPI1_ReadWriteByte(0x00);
 
-	for(int i=0; i < 8; i++)
- 		uuid[i] = SPI1_ReadWriteByte(0xFF);
+        for(int i=0; i < 8; i++)
+            _uuid[i] = SPI1_ReadWriteByte(0xFF);
 
-    GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+        GPIO_WriteBit(GPIOA, GPIO_Pin_4, 1);
+        _cached = true;
+    }
+
+    if(uuid){
+        for(int i=0; i < 8; i++)
+            uuid[i] = _uuid[i];
+    }
 }
 
 /*********************************************************************
