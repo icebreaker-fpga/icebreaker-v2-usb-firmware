@@ -13,10 +13,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-inc = include_directories('.')
+inc = include_directories([
+  '.', 
+  'tusb',
+  'tusb/portable/wch/ch32v307',
+  'platform'
+])
 src = files([
-  'cdc_acm_to_uart.c',
   'ch32v30x_it.c',
   'main.c',
   'system_ch32v30x.c',
+  'flash.c',
+  'time.c',
+  'tusb/usb_descriptors.c',
+  'tusb/portable/wch/ch32v307/usb_dc_usbhs.c',
+  'platform/hw_1.99a.c'
 ])

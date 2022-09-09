@@ -26,17 +26,22 @@ assert(
   'Microcontroller projects can only be built in a cross build environment.',
 )
 
-c_args = [
-  '-flto',
-  '-march=rv32imafc',
-  '-mabi=ilp32f',
+add_global_arguments([
+  '-march=rv32ima',
+  '-mabi=ilp32',
+  '-O3',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
-]
+  '-DCFG_TUSB_MCU=OPT_MCU_CH32VF307',
+	'-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
+  '-DCONFIG_USB_HS',
+  '-DTUP_DCD_ENDPOINT_MAX=4',
+  '-fstack-usage',
+], language: ['c', 'cpp'])
 if get_option('usb_port') == 'hs'
   c_args += '-DCONFIG_USB_HS'
 endif
@@ -54,10 +59,9 @@ if get_option('board') == 'ch32v307v-r1'
 elif get_option('board') == 'icebreaker-v1.99a'
   c_args += '-DDEBUG=3'
 endif
-link_args = [
-  '-flto',
-  '-march=rv32imafc',
-  '-mabi=ilp32f',
+add_global_link_arguments([
+  '-march=rv32ima',
+  '-mabi=ilp32',
   '-msmall-data-limit=8',
   '-mno-save-restore',
   '-fmessage-length=0',
@@ -65,8 +69,8 @@ link_args = [
   '-ffunction-sections',
   '-fdata-sections',
   '-nostartfiles',
-  '-Xlinker',
-  '--gc-sections',
+  '-Xlinker', '-Map=output.map',
+  '-Xlinker', '--gc-sections',
   '--specs=nano.specs',
   '--specs=nosys.specs',
 ]
@@ -96,12 +100,21 @@ hex = custom_target(
   depends : exe,
   build_by_default : true,
 )
+bin = custom_target(
+  name + '.bin',
+  input : exe,
+  output : name + '.bin',
+  command : [objcopy, '-O', 'binary', '@INPUT@', '@OUTPUT@'],
+  depends : exe,
+  build_by_default : true,
+)
 lst = custom_target(
   name + '.lst',
   input : exe,
   output : name + '.lst',
-  command : [objdump, '--all-headers', '--demangle', '--disassemble', '@INPUT@'],
+  command : [objdump, '--demangle', '--disassemble', '@INPUT@'],
   capture : true,
   depends : exe,
   build_by_default : true,
 )
+run_target('upload', command: [ find_program('python'), '-m', 'ch55xtool', '-f', bin, '-r'], depends: exe)

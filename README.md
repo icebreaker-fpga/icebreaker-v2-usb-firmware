@@ -12,7 +12,7 @@ Firmware to implement USB communications on the CH32V307 microcontroller.
 
 ```text
 meson setup build/ --cross-file riscv-xpack # or riscv-sifive
-meson compile -C build/
+ninja -C build
 ```
 
 ### Build Options
@@ -28,6 +28,20 @@ Change an existing build:
 ```text
 meson --reconfigure build/ -Doption_name=option_value
 ```
+
+<<<<<<< HEAD
+| Option Name   | Option Value                    | Option Description        |
+| ------------- | ------------------------------- | ------------------------- |
+| board         | ch32v307v-r1, icebreaker-v1.99a | which board/pins are used |
+| usb_port      | hs, fs                          | which usb port is used    |
+| usb_debug     | error, warning, info, log       | which debug level is used |
+=======
+## Uploading
+
+```text
+ninja -C build upload
+```
+>>>>>>> tinyusb
 
 | Option Name   | Option Value                    | Option Description        |
 | ------------- | ------------------------------- | ------------------------- |
