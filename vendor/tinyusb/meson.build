@@ -27,6 +27,7 @@ tusb_src = files([
     'tinyusb_src/src/class/cdc/cdc_device.c',
     'tinyusb_src/src/class/dfu/dfu_device.c',
     'tinyusb_src/src/class/dfu/dfu_rt_device.c',
+    'tinyusb_src/src/class/vendor/vendor_device.c',
     'tinyusb_src/src/class/hid/hid_device.c',
     'tinyusb_src/src/class/msc/msc_device.c',
 ])

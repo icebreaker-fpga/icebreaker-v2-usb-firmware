@@ -262,25 +262,16 @@ void blink_task(){
   static unsigned int _time;
   static bool _toggle;
 
-  if((board_millis() - _time) > 20){
+  if((board_millis() - _time) > 200){
     _time = board_millis();
 
-    switch(blink_interval_ms){
-      case BLINK_DFU_DOWNLOAD:{
-        if(_toggle ^= 1){
-          GPIO_ResetBits(GPIOC, GPIO_Pin_3);
-          GPIO_SetBits(GPIOC, GPIO_Pin_2);
-        }else{
-          GPIO_SetBits(GPIOC, GPIO_Pin_3);
-          GPIO_ResetBits(GPIOC, GPIO_Pin_2);
-        }
-      } break;
-
-      default:{
-          GPIO_ResetBits(GPIOC, GPIO_Pin_3);
-          GPIO_ResetBits(GPIOC, GPIO_Pin_2);
-      } break;
-    }
+      if(_toggle ^= 1){
+        GPIO_ResetBits(GPIOC, GPIO_Pin_3);
+        GPIO_SetBits(GPIOC, GPIO_Pin_2);
+      }else{
+        GPIO_SetBits(GPIOC, GPIO_Pin_3);
+        GPIO_ResetBits(GPIOC, GPIO_Pin_2);
+      }
   }
 }
 
@@ -324,165 +315,93 @@ void reset_task(){
 }
 
 
+
+enum mpsse_requests {
+  REQUEST_RESET           =0x00,
+  REQUEST_MODEM_CTRL      =0x01,
+  REQUEST_SET_FLOW_CTRL   =0x02,
+  REQUEST_SET_BAUD_RATE   =0x03,
+  REQUEST_SET_DATA        =0x04,
+  REQUEST_GET_MODEM_STAT  =0x05,
+  REQUEST_SET_EVENT_CHAR  =0x06,
+  REQUEST_SET_ERROR_CHAR  =0x07,
+  REQUEST_SET_LAT_TIMER   =0x09,
+  REQUEST_GET_LAT_TIMER   =0x0A,
+  REQUEST_SET_BITMODE     =0x0B,
+  FTDI_SIO_READ_EEPROM    =0x90,
+};
+
+uint8_t lat_timer = 0;
+
 //--------------------------------------------------------------------+
-// DFU callbacks
-// Note: alt is used as the partition number, in order to support multiple partitions like FLASH, EEPROM, etc.
+// MPSSE use vendor class
 //--------------------------------------------------------------------+
 
-// Invoked right before tud_dfu_download_cb() (state=DFU_DNBUSY) or tud_dfu_manifest_cb() (state=DFU_MANIFEST)
-// Application return timeout in milliseconds (bwPollTimeout) for the next download/manifest operation.
-// During this period, USB host won't try to communicate with us.
-uint32_t tud_dfu_get_timeout_cb(uint8_t alt, uint8_t state)
+// Invoked when a control transfer occurred on an interface of this class
+// Driver response accordingly to the request and the transfer stage (setup/data/ack)
+// return false to stall control endpoint (e.g unsupported request)
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request)
 {
-	if (state == DFU_DNBUSY)
-	{
-		return 0; /* Request we are polled in 1ms */
-	}
-	else if (state == DFU_MANIFEST)
-	{
-		return 0; // since we don't buffer entire image and do any flashing in manifest stage
-	}
+  // nothing to with DATA & ACK stage
+  if (stage != CONTROL_STAGE_SETUP) return true;
 
-	return 0;
-}
+  switch (request->bmRequestType_bit.type)
+  {
+    case TUSB_REQ_TYPE_VENDOR:
+      switch (request->bRequest)
+      {
+        case REQUEST_RESET:
+          return tud_control_xfer(rhport, request, NULL, 0);
 
-void dfu_download_flash(uint16_t block_num, uint8_t const *data, uint16_t length);
-void dfu_download_sram(uint16_t block_num, uint8_t const *data, uint16_t length);
+        case REQUEST_GET_LAT_TIMER:
+          if(request->wLength == 1){
+            return tud_control_xfer(rhport, request, (void*)(uint8_t[]){lat_timer}, 1);
+          }
+          return false;
 
-// Invoked when received DFU_DNLOAD (wLength>0) following by DFU_GETSTATUS (state=DFU_DNBUSY) requests
-// This callback could be returned before flashing op is complete (async).
-// Once finished flashing, application must call tud_dfu_finish_flashing()
-void tud_dfu_download_cb(uint8_t alt, uint16_t block_num, uint8_t const *data, uint16_t length)
-{
-	(void)alt;
-	(void)block_num;
+        case REQUEST_SET_LAT_TIMER:
+          lat_timer = request->wValue;
+          return tud_control_xfer(rhport, request, NULL, 0);
+        
+        case REQUEST_SET_BAUD_RATE:
+          {
+            uint8_t baud_low = request->wValue & 0xFF;
+            uint8_t baud_high = (request->wValue >> 8) & 0xFF;
+            uint8_t port = request->wIndex & 0xFF;
+            uint8_t clock_div = (request->wIndex >> 8) & 0xFF;
+          }
+          return tud_control_xfer(rhport, request, NULL, 0);
+          
+        case REQUEST_SET_BITMODE:
+          return tud_control_xfer(rhport, request, NULL, 0);
 
-  if(alt == 0){
-    dfu_download_flash(block_num, data, length);
+        case FTDI_SIO_READ_EEPROM:
+          /* Return 0xFF bytes, like a real FTDI without EEPROM might */
+          if(request->wLength == 2){
+            return tud_control_xfer(rhport, request, (void*)(uint8_t[]){0xFF,0xFF}, 2);
+          }
+          return false;
+          
+
+
+        default: break;
+      }
+    break;
+
+
+    default: break;
   }
-  else{
-    dfu_download_sram(block_num, data, length);
-  }
 
-}
-
-void dfu_download_flash(uint16_t block_num, uint8_t const *data, uint16_t length){
-  if(!is_flash_spi_inited()){
-    ice40_reset_hold();
-    flash_spi_init();
-    GPIO_SetBits(GPIOE, GPIO_Pin_13);
-    SPI_Flash_WAKEUP();
-  }
-
-	blink_interval_ms = BLINK_DFU_DOWNLOAD;
-
-	if ((block_num * CFG_TUD_DFU_XFER_BUFSIZE) >= alt_offsets[0].length)
-	{
-		// flashing op for download length error
-		tud_dfu_finish_flashing(DFU_STATUS_ERR_ADDRESS);
-
-		blink_interval_ms = BLINK_DFU_ERROR;
-
-		return;
-	}
-
-	uint32_t flash_address = alt_offsets[0].address + block_num * CFG_TUD_DFU_XFER_BUFSIZE;
-
-
-	for (int i = 0; i < CFG_TUD_DFU_XFER_BUFSIZE / 256; i++)
-	{
-    /* First block in 64K erase block */
-    if ((flash_address & (FLASH_4K_BLOCK_ERASE_SIZE - 1)) == 0)
-    {
-      SPI_Flash_Erase_Sector(flash_address);
-    }
-
-    SPI_Flash_Write_Page((uint8_t*)data, flash_address, 256);
-		flash_address += 256;
-		data += 256;
-	}
-
-	// flashing op for download complete without error
-	tud_dfu_finish_flashing(DFU_STATUS_OK);
+  // stall unknown request
+  return false;
 }
 
 
-void dfu_download_sram(uint16_t block_num, uint8_t const *data, uint16_t length){
-  
-  if(!is_ice40_spi_inited()){
-    ice40_reset_hold();
-    //GPIO_ResetBits(GPIOE, GPIO_Pin_13); /* Disconnect ice40 CS from FLASH CS */
-  
-    ice40_spi_init();
-    ice40_reset_release();
-    delay_Ms(3);
-    GPIO_SetBits(GPIOB, GPIO_Pin_12);
-    delay_Ms(1);
+// Invoked when received new data
+void tud_vendor_rx_cb(uint8_t itf){
 
-    SPI_I2S_SendData(SPI2, 0xFF); /* 8 dummy clocks */
-    while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));
-    delay_Ms(1);
-    
-    GPIO_ResetBits(GPIOB, GPIO_Pin_12);
-
-  }
-
-	blink_interval_ms = BLINK_DFU_DOWNLOAD;
-
-  uint8_t const *c = data;
-  for(int i = 0; i < length; i++){
-    
-    while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));
-    SPI_I2S_SendData(SPI2, *c++);
-  }
-
-	// flashing op for download complete without error
-	tud_dfu_finish_flashing(DFU_STATUS_OK);
 }
 
-// Invoked when download process is complete, received DFU_DNLOAD (wLength=0) following by DFU_GETSTATUS (state=Manifest)
-// Application can do checksum, or actual flashing if buffered entire image previously.
-// Once finished flashing, application must call tud_dfu_finish_flashing()
-void tud_dfu_manifest_cb(uint8_t alt)
-{
-	(void)alt;
-	blink_interval_ms = BLINK_DFU_IDLE;
-
-  // flashing op for manifest is complete without error
-	// Application can perform checksum, should it fail, use appropriate status such as errVERIFY.
-	tud_dfu_finish_flashing(DFU_STATUS_OK);
-}
-
-// Invoked when the Host has terminated a download or upload transfer
-void tud_dfu_abort_cb(uint8_t alt)
-{
-	(void)alt;
-	blink_interval_ms = BLINK_DFU_ERROR;
-}
-
-// Invoked when a DFU_DETACH request is received
-void tud_dfu_detach_cb(void)
-{
-	blink_interval_ms = BLINK_DFU_SLEEP;
-
-  if(is_ice40_spi_inited()){
-
-    for(int i = 0; i <= 149/8; i++){
-      while(!SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE));
-      SPI_I2S_SendData(SPI2, 0xFF); /* 149 dummy clocks */
-    }
-    delay_Ms(2);
-    GPIO_SetBits(GPIOB, GPIO_Pin_12);
-    ice40_spi_deinit();
-
-  }else{
-
-    flash_spi_deinit();
-    GPIO_SetBits(GPIOE, GPIO_Pin_13);
-
-    ice40_reset_release();
-
-  }
-    
-
+// Invoked when last rx transfer finished
+void tud_vendor_tx_cb(uint8_t itf, uint32_t sent_bytes){
 }
