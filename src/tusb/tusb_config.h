@@ -90,7 +90,7 @@
 #define CFG_TUD_ENDPOINT0_SIZE    64
 #endif
 
-#define CFG_TUSB_DEBUG 3
+#define CFG_TUSB_DEBUG 1
 
 //------------- CLASS -------------//
 #define CFG_TUD_VENDOR            1
@@ -98,8 +98,8 @@
 // DFU buffer size, it has to be set to the buffer size used in TUD_DFU_DESCRIPTOR
 #define CFG_TUD_VENDOR_EPSIZE 512
 
-#define CFG_TUD_VENDOR_RX_BUFSIZE    512
-#define CFG_TUD_VENDOR_TX_BUFSIZE    512
+#define CFG_TUD_VENDOR_RX_BUFSIZE    512 * 2
+#define CFG_TUD_VENDOR_TX_BUFSIZE    512 * 2
 
 #ifdef __cplusplus
  }
