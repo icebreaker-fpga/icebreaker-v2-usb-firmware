@@ -27,7 +27,7 @@ assert(
 )
 
 c_args = [
-  '-march=rv32ima',
+  '-march=rv32imac',
   '-mabi=ilp32',
   '-O3',
   '-msmall-data-limit=8',
@@ -37,7 +37,7 @@ c_args = [
   '-ffunction-sections',
   '-fdata-sections',
   '-DCFG_TUSB_MCU=OPT_MCU_CH32VF307',
-	'-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
+  '-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
   '-DCONFIG_USB_HS',
   '-DTUP_DCD_ENDPOINT_MAX=4',
   '-fstack-usage',
@@ -60,7 +60,7 @@ elif get_option('board') == 'icebreaker-v1.99a'
   c_args += '-DDEBUG=3'
 endif
 link_args = [
-  '-march=rv32ima',
+  '-march=rv32imac',
   '-mabi=ilp32',
   '-msmall-data-limit=8',
   '-mno-save-restore',
