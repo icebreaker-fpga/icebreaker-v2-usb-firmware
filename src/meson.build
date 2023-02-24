@@ -16,7 +16,6 @@
 inc = include_directories([
   '.', 
   'tusb',
-  'tusb/portable/wch/ch32v307',
   'platform'
 ])
 src = files([
@@ -26,6 +25,5 @@ src = files([
   'flash.c',
   'time.c',
   'tusb/usb_descriptors.c',
-  'tusb/portable/wch/ch32v307/usb_dc_usbhs.c',
   'platform/hw_1.99a.c'
 ])

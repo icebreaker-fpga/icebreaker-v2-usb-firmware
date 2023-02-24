@@ -18,6 +18,7 @@ tusb_inc = include_directories([
     'tinyusb_src/src/device',
     'tinyusb_src/src/common',
     'tinyusb_src/src/class/cdc',
+    'tinyusb_src/src/portable/wch/ch32v307',
 ])
 tusb_src = files([
     'tinyusb_src/src/tusb.c',
@@ -29,4 +30,5 @@ tusb_src = files([
     'tinyusb_src/src/class/dfu/dfu_rt_device.c',
     'tinyusb_src/src/class/hid/hid_device.c',
     'tinyusb_src/src/class/msc/msc_device.c',
+    'tinyusb_src/src/portable/wch/ch32v307/dcd_usbhs.c',
 ])
