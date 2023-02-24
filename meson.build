@@ -36,15 +36,10 @@ c_args = [
   '-fsigned-char',
   '-ffunction-sections',
   '-fdata-sections',
-  '-DCFG_TUSB_MCU=OPT_MCU_CH32VF307',
+  '-DCFG_TUSB_MCU=OPT_MCU_CH32V307',
   '-DBOARD_DEVICE_RHPORT_SPEED=OPT_MODE_HIGH_SPEED',
-  '-DCONFIG_USB_HS',
-  '-DTUP_DCD_ENDPOINT_MAX=4',
   '-fstack-usage',
 ]
-if get_option('usb_port') == 'hs'
-  c_args += '-DCONFIG_USB_HS'
-endif
 if get_option('usb_debug') == 'error'
   c_args += '-DUSB_DBG_LEVEL=0'
 elif get_option('usb_debug') == 'warning'

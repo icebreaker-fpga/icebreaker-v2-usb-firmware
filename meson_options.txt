@@ -24,6 +24,3 @@ option('usb_debug',
   value : 'info',
   description : 'usb debug output',
 )
-option('usb_port', type : 'combo', choices : ['hs', 'fs'], value : 'hs',
-  description : 'hs - high speed port, fs - full speed port',
-)
