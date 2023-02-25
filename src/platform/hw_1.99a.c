@@ -156,7 +156,7 @@ void ice40_spi_init(){
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
 
-  GPIO_ResetBits(GPIOB, GPIO_Pin_12);
+  //GPIO_SetBits(GPIOB, GPIO_Pin_12);
   GPIO_Init(
     GPIOB, 
     &(GPIO_InitTypeDef) {

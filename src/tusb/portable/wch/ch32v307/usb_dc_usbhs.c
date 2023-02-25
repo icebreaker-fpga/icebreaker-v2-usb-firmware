@@ -330,6 +330,8 @@ void dcd_int_handler(uint8_t rhport) {
             if (end_num == 0) {
                 USBHSD->UEP0_RX_CTRL = (USBHSD->UEP0_RX_CTRL & ~(USBHS_EP_R_RES_MASK)) | USBHS_EP_R_RES_NAK;
                 memcpy(xfer->buffer, ep0_databuf, rx_len);
+            }else {
+                EP_RX_CTRL(end_num) = (EP_RX_CTRL(end_num) & ~(USBHS_EP_R_RES_MASK)) | USBHS_EP_R_RES_NAK;
             }
 
             if (xfer->short_packet || (xfer->queued_len == xfer->total_len)) {
