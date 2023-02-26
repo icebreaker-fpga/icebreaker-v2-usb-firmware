@@ -1102,7 +1102,7 @@ s32 TempSensor_Volt_To_Temper(s32 Value)
     Refer_Volt = (s32)((*(u32 *)0x1FFFF720) & 0x0000FFFF);
     Refer_Temper = (s32)(((*(u32 *)0x1FFFF720) >> 16) & 0x0000FFFF);
 
-    Temper = Refer_Temper + ((Value - Refer_Volt) * 10 + (k >> 1)) / k;
+    Temper = Refer_Temper - ((Value - Refer_Volt) * 10 + (k >> 1)) / k;
 
     return Temper;
 }
@@ -1157,13 +1157,13 @@ int16_t Get_CalibrationValue(ADC_TypeDef *ADCx)
 
     for(i = 0; i < 10; i++)
     {
-        for(j = 0; j < 10; j++)
+        for(j = 0; j < 9; j++)
         {
             if(buf[j] > buf[j + 1])
             {
                 t = buf[j];
                 buf[j] = buf[j + 1];
-                buf[j] = t;
+                buf[j + 1] = t;
             }
         }
     }

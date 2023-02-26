@@ -10,6 +10,10 @@
 #ifndef __CORE_RISCV_H__
 #define __CORE_RISCV_H__
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 /* IO definitions */
 #ifdef __cplusplus
   #define     __I     volatile                /* defines 'read only' permissions */
@@ -60,7 +64,7 @@ typedef int32_t  s32;
 typedef int16_t s16;
 typedef int8_t  s8;
 
-typedef enum {ERROR = 0, SUCCESS = !ERROR} ErrorStatus;
+typedef enum {NoREADY = 0, READY = !NoREADY} ErrorStatus;
 
 typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionalState;
 
@@ -76,7 +80,7 @@ typedef struct{
   __IO uint32_t RESERVED;
   __IO uint32_t CFGR;
   __I  uint32_t GISR;
-  uint8_t VTFIDR[4];
+  __IO uint8_t VTFIDR[4];
   uint8_t RESERVED0[12];
   __IO uint32_t VTFADDR[4];
   uint8_t RESERVED1[0x90];
@@ -346,8 +350,6 @@ extern uint32_t __get_MSTATUS(void);
 extern void __set_MSTATUS(uint32_t value);
 extern uint32_t __get_MISA(void);
 extern void __set_MISA(uint32_t value);
-extern uint32_t __get_MIE(void);
-extern void __set_MIE(uint32_t value);
 extern uint32_t __get_MTVEC(void);
 extern void __set_MTVEC(uint32_t value);
 extern uint32_t __get_MSCRATCH(void);
@@ -358,22 +360,15 @@ extern uint32_t __get_MCAUSE(void);
 extern void __set_MCAUSE(uint32_t value);
 extern uint32_t __get_MTVAL(void);
 extern void __set_MTVAL(uint32_t value);
-extern uint32_t __get_MIP(void);
-extern void __set_MIP(uint32_t value);
-extern uint32_t __get_MCYCLE(void);
-extern void __set_MCYCLE(uint32_t value);
-extern uint32_t __get_MCYCLEH(void);
-extern void __set_MCYCLEH(uint32_t value);
-extern uint32_t __get_MINSTRET(void);
-extern void __set_MINSTRET(uint32_t value);
-extern uint32_t __get_MINSTRETH(void);
-extern void __set_MINSTRETH(uint32_t value);
 extern uint32_t __get_MVENDORID(void);
 extern uint32_t __get_MARCHID(void);
 extern uint32_t __get_MIMPID(void);
 extern uint32_t __get_MHARTID(void);
 extern uint32_t __get_SP(void);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

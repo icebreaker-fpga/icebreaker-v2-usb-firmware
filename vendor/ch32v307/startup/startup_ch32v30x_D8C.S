@@ -3,7 +3,7 @@
 * Author             : WCH
 * Version            : V1.0.0
 * Date               : 2021/06/06
-* Description        : CH32V307-CH32V305 vector table for eclipse toolchain.
+* Description        : CH32V307x-CH32V305x vector table for eclipse toolchain.
 * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
 * SPDX-License-Identifier: Apache-2.0
 *******************************************************************************/
@@ -136,7 +136,7 @@ _vector_base:
     .word   DMA2_Channel10_IRQHandler  /* DMA2 Channel 10 */
     .word   DMA2_Channel11_IRQHandler  /* DMA2 Channel 11 */
 
-    //.option rvc;
+    .option rvc;
 
     .section    .text.vector_handler, "ax", @progbits
     .weak   NMI_Handler                /* NMI */
@@ -334,7 +334,7 @@ DMA2_Channel11_IRQHandler:  1:  j 1b
 
 	.section	.text.handle_reset,"ax",@progbits
 	.weak	handle_reset
-	.align	4
+	.align	1
 handle_reset:
 .option push 
 .option	norelax 
@@ -368,11 +368,10 @@ handle_reset:
     csrw 0xbc0, t0
 
     /* Enable nested and hardware stack */
-    /* HWSTKOVEN -  1 = interrupt enabled after hardware stack overflow */
-    /* PMTCFG    - 11 = 8 nested levels, 3 preemption bits */
+    /* PMTCFG    - 10 = 4 levels of nesting, with 2 preemption bits */
     /* INESTEN   -  1 = interrupt nesting enabled */
     /* HWSTKEN   -  1 = hardware stack enabled */
-    li t0, 0x1f /* HWSTKOVEN[4], PMTCFG[3:2], INESTEN[1], HWSTKEN[0] */
+    li t0, 0x0b /* PMTCFG[3:2], INESTEN[1], HWSTKEN[0] */
     csrw 0x804, t0 /* INTSYSCR (CSR) */
 
     /* Enable floating point and interrupt */
@@ -382,6 +381,10 @@ handle_reset:
  	la t0, _vector_base
     ori t0, t0, 3           
 	csrw mtvec, t0
+
+    la a0,__libc_fini_array
+    call atexit
+    call __libc_init_array
 
     jal  SystemInit
 	la t0, main

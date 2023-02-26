@@ -1,12 +1,28 @@
 ENTRY( _start )
 
-__stack_size = 4096;
+__stack_size = 2048;
 
 PROVIDE( _stack_size = __stack_size );
 
 
 MEMORY
 {
+/* CH32V30x_D8C - CH32V305RB-CH32V305FB
+   CH32V30x_D8 - CH32V303CB-CH32V303RB
+*/
+/*
+	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 128K
+	RAM (xrw) : ORIGIN = 0x20000000, LENGTH = 32K
+*/
+    
+/* CH32V30x_D8C - CH32V307VC-CH32V307WC-CH32V307RC
+   CH32V30x_D8 - CH32V303VC-CH32V303RC
+   FLASH + RAM supports the following configuration
+   FLASH-192K + RAM-128K
+   FLASH-224K + RAM-96K
+   FLASH-256K + RAM-64K  
+   FLASH-288K + RAM-32K  
+*/
 	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 288K
 	RAM (xrw) : ORIGIN = 0x20000000, LENGTH = 32K
 }
@@ -37,8 +53,6 @@ SECTIONS
 		*(.text.*)
 		*(.rodata)
 		*(.rodata*)
-		*(.glue_7)
-		*(.glue_7t)
 		*(.gnu.linkonce.t.*)
 		. = ALIGN(4);
 	} >FLASH AT>FLASH 
@@ -164,6 +178,7 @@ SECTIONS
     } >RAM 
 
 }
+
 
 
 
