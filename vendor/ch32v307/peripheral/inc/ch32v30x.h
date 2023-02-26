@@ -14,8 +14,11 @@
  extern "C" {
 #endif 
 
-//#define CH32V30x_D8              /* CH32V303 */
-#define CH32V30x_D8C             /* CH32V307-CH32V305 */
+#if !defined(CH32V30x_D8) && !defined(CH32V30x_D8C)
+//#define CH32V30x_D8              /* CH32V303x */
+#define CH32V30x_D8C             /* CH32V307x-CH32V305x */
+
+#endif
   
 #define __MPU_PRESENT             0 /* Other CH32 devices does not provide an MPU */
 #define __Vendor_SysTickConfig    0 /* Set to 1 if different SysTick Config is used */	 
@@ -121,9 +124,8 @@ typedef enum IRQn
   DMA2_Channel10_IRQn         = 102,     /* DMA2 Channel 10 global Interrupt                     */
   DMA2_Channel11_IRQn         = 103,     /* DMA2 Channel 11 global Interrupt                     */
 
-#endif
-
-#ifdef CH32V30x_D8C
+#elif defined  (CH32V30x_D8C)
+  USBWakeUp_IRQn              = 58,      /* USB Device WakeUp from suspend through EXTI Line Interrupt */
   TIM8_BRK_IRQn               = 59,      /* TIM8 Break Interrupt                                 */
   TIM8_UP_IRQn                = 60,      /* TIM8 Update Interrupt                                */
   TIM8_TRG_COM_IRQn           = 61,      /* TIM8 Trigger and Commutation Interrupt               */
@@ -615,7 +617,9 @@ typedef struct
   __IO uint16_t I2SCFGR;
   uint16_t  RESERVED7;
   __IO uint16_t I2SPR;
-  uint16_t  RESERVED8;  
+  uint16_t  RESERVED8;
+  __IO uint16_t HSCR;
+  uint16_t  RESERVED9;
 } SPI_TypeDef;
 
 /* TIM */
